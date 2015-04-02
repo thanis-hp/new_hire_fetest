@@ -1,0 +1,19 @@
+log4j.rootLogger=DEBUG, R, stdout
+log4j.appender.R=org.apache.log4j.DailyRollingFileAppender
+#log4j.appender.R.File=/home/temip/apache-tomcat-7.0.42/logs/temip_alb.log
+log4j.appender.R.File=E:\\Temp\\temip_alb.log
+log4j.appender.R.DatePattern='.'yyyy-MM-dd
+log4j.appender.R.layout=org.apache.log4j.PatternLayout
+log4j.appender.R.layout.ConversionPattern=%d [%-5p] [%C.%M] - %m%n
+
+## Console output...
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%5p %d %C: %m%n
+
+log4j.logger.com.hp.temip=DEBUG
+log4j.logger.org.springframework.security=OFF
+log4j.logger.org.springframework.jdbc=OFF
+log4j.logger.org.springframework=OFF
+log4j.logger.org.apache.ibatis=OFF
+

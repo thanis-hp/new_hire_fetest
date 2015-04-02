@@ -1,0 +1,47 @@
+
+	var alarmStore = new Ext.data.JsonStore({
+		storeId: 'Alarm',
+	    autoLoad:false,
+	    proxy: {
+	        type: 'ajax',
+	        url: 'getAlarm.htm',
+	        reader: {
+	            type: 'json',
+	            root: 'alarms'
+	        }
+	    },
+		
+	    fields: ['severity', {name:'eventTime', type:'date'}, 'status', 'managedElement', 'alarmName','location','additionalText']
+	});
+	
+	
+	alarmGrid = Ext.create('Ext.grid.Panel', {
+	    store: alarmStore,
+	    columns: [
+	        Ext.create('Ext.grid.RowNumberer'),
+	        {text: "Severity", width: 50, sortable: true, dataIndex: 'severity', 
+				renderer: function(value, metaData, record, rowIndex, colIndex, store) {
+							  if (value == 'Critical') {
+								return '<div style="background-color:red; text-decoration:blink; color:white;">' + value + '</div>';
+							  } else if (value == 'Major') {
+								return '<div style="background-color:orange; text-decoration:blink; color:white;">' + value + '</div>';
+							  }
+							  
+							  return value;
+						   }},
+	        {text: "Event Time", width: 120, sortable: true, renderer: Ext.util.Format.dateRenderer('m/d/Y h:i:s'), dataIndex: 'eventTime'},
+	        {text: "Status", width: 40, sortable: true, dataIndex: 'status'},
+	        {text: "Managed Object", width: 180, sortable: true, dataIndex: 'managedElement'},
+	        {text: "Alarm Name", width: 120, sortable: true, dataIndex: 'alarmName'},
+	        {text: "Location", width: 100, sortable: true, dataIndex: 'location'},
+	        {text: "Domain", width: 100, sortable: true, dataIndex: 'domain'},
+	        {text: "Additional Text", width: 230, sortable: true, dataIndex: 'additionalText'}
+	    ],
+	    columnLines: true,
+		collapsible: false,
+	    title:'Alarm Dashboard',
+	    iconCls:'icon-grid',
+		autoScroll: true
+	});
+
+

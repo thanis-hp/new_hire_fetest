@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<accessmodules>
+
+    <accessmodule>
+        <name>ericsson_ossrc_am</name>
+    </accessmodule>
+    <accessmodule>
+        <name>ericsson_ossrc_crb_am</name>
+    </accessmodule>
+    <accessmodule>
+        <name>huawei_m2000_am</name>
+    </accessmodule>
+    <accessmodule>
+        <name>hw_t2000_am</name>
+    </accessmodule>
+    <accessmodule>
+        <name>hw_u2000_am</name>
+    </accessmodule>
+    <accessmodule>
+        <name>nokia_netact_am</name>
+    </accessmodule>
+    <accessmodule>
+        <name>NNMi_AM</name>
+    </accessmodule>
+    <accessmodule>
+        <name>ovo_am</name>
+    </accessmodule>
+    <accessmodule>
+        <name>tellabs_8100_am</name>
+    </accessmodule>
+</accessmodules>

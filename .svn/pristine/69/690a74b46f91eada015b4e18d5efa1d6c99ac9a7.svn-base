@@ -1,0 +1,86 @@
+package com.hp.temip.alb_gui.domain;
+
+/**
+ * Copyright Hewlett Packard Sales (M) Sdn Bhd
+ * User: Thaniswaran Raja Goval
+ * Email: thaniswaran.raja-goval@hp.com
+ * Date: 9/25/13
+ * Time: 11:19 AM
+ * Project: $(PROJECT_NAME)
+ * Package: com.hp.temip.alb_gui.domain
+ */
+public class AlbReferenceObject {
+    private int refCat;
+
+    private String refName;
+
+    private String refValue;
+
+    private String refDesc;
+
+    public int getRefCat() {
+        return refCat;
+    }
+
+    public void setRefCat(int refCat) {
+        this.refCat = refCat;
+    }
+
+    public String getRefName() {
+        return refName;
+    }
+
+    public void setRefName(String refName) {
+        this.refName = refName;
+    }
+
+    public String getRefValue() {
+        return refValue;
+    }
+
+    public void setRefValue(String refValue) {
+        this.refValue = refValue;
+    }
+
+    public String getRefDesc() {
+        return refDesc;
+    }
+
+    public void setRefDesc(String refDesc) {
+        this.refDesc = refDesc;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof AlbReferenceObject)) return false;
+
+        AlbReferenceObject that = (AlbReferenceObject) o;
+
+        if (refCat != that.refCat) return false;
+        if (refDesc != null ? !refDesc.equals(that.refDesc) : that.refDesc != null) return false;
+        if (!refName.equals(that.refName)) return false;
+        if (!refValue.equals(that.refValue)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = refCat;
+        result = 31 * result + refName.hashCode();
+        result = 31 * result + refValue.hashCode();
+        result = 31 * result + (refDesc != null ? refDesc.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "AlbReferenceObject{" +
+                "refCat=" + refCat +
+                ", refName='" + refName + '\'' +
+                ", refValue='" + refValue + '\'' +
+                ", refDesc='" + refDesc + '\'' +
+                '}';
+    }
+}

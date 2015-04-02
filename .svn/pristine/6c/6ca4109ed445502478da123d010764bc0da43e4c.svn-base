@@ -1,0 +1,1041 @@
+package com.hp.temip.alb_gui.controller;
+
+import com.hp.temip.alb_gui.domain.AlarmIdentifierGridObject;
+import com.hp.temip.alb_gui.domain.ParameterExtractGridObject;
+import com.hp.temip.alb_gui.domain.ProfileGridObject;
+import com.hp.temip.alb_gui.domain.SelectionControlGridObject;
+import com.hp.temip.alb_gui.service.ProfileService;
+import com.hp.temip.alb_gui.service.UserAccessAuditService;
+import com.hp.temip.alb_gui.util.FileMaker;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.io.*;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 8/27/13
+ * Time: 4:47 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Controller
+public class ProfileController {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    private ProfileService service;
+
+    //constants for the file names.. to use in inserting values in DB
+    private static final String PARAMETER_EXTRACT_SUFFIX = "_parameterextraction.csv";
+    private static final String ALARM_IDENTIFIER_SUFFIX = "_alarmidentifier.csv";
+    private static final String CUSTOM_FIELDS = "custom_fields.csv";
+    private static final String JSON_POST_VALUE = "postvalue";
+    private static final String JSON_SELECTION_CONTROL = "selctrl";
+    private static final String JSON_PARAMETER_EXTRACT = "paramextract";
+    private static final String JSON_ALARM_IDENTIFICATION = "alarmident";
+
+    private static final String PENDING_STATUS = "Pending";
+    private static final String SUCCESS_STATUS = "Success";
+    private static final String ERROR_STATUS = "Error";
+
+//    @Value("${script.inputdir}")
+//    private String inputDir;
+
+    @Value("${script.outputdir}")
+    private String outputDir;
+
+    @Value("${script.install.filename}")
+    private String installFilename;
+
+    @Value("${script.update.filename}")
+    private String updateFilename;
+
+    @Value("${script.preview.filename}")
+    private String previewFilename;
+
+    @Value("${script.translatecsv.filename}")
+    private String translateCsvFilename;
+
+    private UserAccessAuditService userAccessAuditService;
+
+
+    @Autowired
+    public void setService(ProfileService service) {
+        this.service = service;
+    }
+
+    @Autowired
+    public void setUserAccessAuditService(UserAccessAuditService service) {
+        this.userAccessAuditService = service;
+    }
+
+
+
+    @RequestMapping(value = "/getProfileList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getProfileList() {
+        List<ProfileGridObject> profileList = service.getProfileList();
+
+        HashMap<String, List<ProfileGridObject>> modelMap = new HashMap<String, List<ProfileGridObject>>();
+        modelMap.put("profiles", profileList);
+        logger.info(profileList);
+        return modelMap;
+    }
+
+
+    @RequestMapping(value = "insertNewProfile.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertNewProfile(@RequestParam String profileId) {
+        String result = "{success:true}";
+
+        try {
+
+            org.springframework.security.core.userdetails.User user = (org.springframework.security.core.userdetails.User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+            if (null == profileId) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+
+            ProfileGridObject profileGridObject = new ProfileGridObject();
+            profileGridObject.setProfileId(profileId);
+            profileGridObject.setTranslateStatus(PENDING_STATUS);
+            profileGridObject.setDeployStatus(PENDING_STATUS);
+
+            //check if profile exist first (any version)
+            List<ProfileGridObject> checkExists = service.checkProfileExists(profileId);
+
+            if(checkExists != null && checkExists.size() > 0){
+                long albVersion = service.getTopAlbVersion(profileId);
+                logger.debug("XXVERSION (before increment):"+albVersion);
+                profileGridObject.setAlbVersion(Long.toString(albVersion+1));
+            }else{
+                logger.debug("XXVERSION setting to 1");
+                profileGridObject.setAlbVersion("1");
+            }
+
+
+
+            profileGridObject.setAlbUser(user.getUsername());
+            profileGridObject.setCustomFields(CUSTOM_FIELDS);
+            profileGridObject.setProfileAlarmProcessing(profileId);
+            profileGridObject.setControlFileAlarmIdentifier(profileId+ALARM_IDENTIFIER_SUFFIX);
+            profileGridObject.setControlFileParameterExtraction(profileId+PARAMETER_EXTRACT_SUFFIX);
+
+
+            SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            String today = sf.format(new Date());
+            logger.debug("today is:"+today);
+
+
+            profileGridObject.setDateCreated(today);
+
+            logger.info("Inserting Profile: " + profileGridObject.toString());
+//            service.insertNewProfile(profileGridObject);
+
+            result = "{success:true}";
+        } catch (Exception e) {
+            e.printStackTrace();
+            result = "{success:false}";
+        }
+
+        userAccessAuditService.insertAudit("PROFILE:NEW");
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+
+
+    }
+
+    @RequestMapping(value = "removeProfile.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> removeSampleAlarm(@RequestParam String profileId, @RequestParam String albVersion) {
+        String result;
+        try {
+
+            if (null == profileId || albVersion == null) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+
+            ProfileGridObject profileGridObject = new ProfileGridObject();
+            profileGridObject.setProfileId(profileId);
+            profileGridObject.setAlbVersion(albVersion);
+
+            logger.debug("Removing Profile: " + profileGridObject.toString());
+            service.removeProfile(profileGridObject);
+            result = "{success:true}";
+        } catch (Exception e) {
+            String errorReason = "Failed to delete profile. Please contact Administrator.";
+            try {
+                throw e.getCause();
+            } catch (SQLException sql) {
+                //custom error reasons for different sql error code
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+            result = "{success:false, errors:{reason:'" + errorReason + "'}}";
+        }
+        userAccessAuditService.insertAudit("PROFILE:REMOVE");
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+    }
+
+
+
+    @RequestMapping(value = "/getSelectionControl.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getSelectionControl(@RequestParam(value = "profileId") String profileId, @RequestParam(value = "albVersion") String albVersion) {
+        logger.debug("profileId is: "+profileId);
+
+        SelectionControlGridObject searchParams = new SelectionControlGridObject();
+        searchParams.setProfileId(profileId);
+        searchParams.setAlbVersion(albVersion);
+
+        List<SelectionControlGridObject> selectionControlGridObject = service.getSelectionControl(searchParams);
+
+        logger.debug("albVersion is: "+albVersion);
+        HashMap<String, List<SelectionControlGridObject>> modelMap = new HashMap<String, List<SelectionControlGridObject>>();
+        modelMap.put("selctrl", selectionControlGridObject);
+        logger.info(selectionControlGridObject);
+        return modelMap;
+    }
+
+
+
+    @RequestMapping(value = "/getParamExtract.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getParamExtract(@RequestParam(value = "profileId") String profileId, @RequestParam(value = "albVersion") String albVersion) {
+        logger.debug("profileId is: "+profileId);
+
+        ParameterExtractGridObject searchParams = new ParameterExtractGridObject();
+        searchParams.setProfileId(profileId);
+        searchParams.setAlbVersion(albVersion);
+
+        List<ParameterExtractGridObject> parameterExtractGridObjects = service.getParameterExtract(searchParams);
+
+        logger.debug("albVersion is: "+albVersion);
+        HashMap<String, List<ParameterExtractGridObject>> modelMap = new HashMap<String, List<ParameterExtractGridObject>>();
+        modelMap.put("paramextract", parameterExtractGridObjects);
+        logger.info(parameterExtractGridObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "/getAlarmIdentifiers.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getAlarmIdentifiers(@RequestParam(value = "profileId") String profileId, @RequestParam(value = "albVersion") String albVersion) {
+        logger.debug("profileId is: "+profileId);
+
+        AlarmIdentifierGridObject searchParams = new AlarmIdentifierGridObject();
+        searchParams.setProfileId(profileId);
+        searchParams.setAlbVersion(albVersion);
+
+        List<AlarmIdentifierGridObject> alarmIdentifierGridObjects = service.getAlarmIdentifier(searchParams);
+
+        logger.debug("albVersion is: "+albVersion);
+        HashMap<String, List<AlarmIdentifierGridObject>> modelMap = new HashMap<String, List<AlarmIdentifierGridObject>>();
+        modelMap.put("alarm", alarmIdentifierGridObjects);
+        logger.info(alarmIdentifierGridObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "insertParameterExtract.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertParameterExtract(@RequestParam String profileId, @RequestParam String albVersion) {
+        String result = "{success:true}";
+        logger.debug("||"+profileId);
+        logger.debug("||"+albVersion); //disregard this
+
+
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "insertAlarmIdentifier.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertAlarmIdentifier(@RequestParam String profileId, @RequestParam String albVersion) {
+        String result = "{success:true}";
+        logger.debug("||"+profileId);
+        logger.debug("||"+albVersion); //disregard this
+
+
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+    }
+
+
+        @RequestMapping(value = "insertFullProfile.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertFullProfile(@RequestParam String dataArray, @RequestParam String profileId, @RequestParam String albVersion, @RequestParam String accessModule) {
+        String result = "{success:true}";
+        logger.debug("||"+profileId);
+        logger.debug("||"+albVersion); //disregard this
+        logger.debug("||"+accessModule); //disregard this
+
+        try {
+
+            org.springframework.security.core.userdetails.User user = (org.springframework.security.core.userdetails.User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+            //insert new profile
+            //TODO check return statement
+
+            ProfileGridObject profileGridObject = new ProfileGridObject();
+            profileGridObject.setProfileId(profileId);
+            profileGridObject.setTranslateStatus("Pending");
+            profileGridObject.setDeployStatus("Pending");
+
+            //check if profile exist first (any version)
+            List<ProfileGridObject> checkExists = service.checkProfileExists(profileId);
+
+            if(checkExists != null && checkExists.size() > 0){
+                long albVersionLong = service.getTopAlbVersion(profileId);
+                logger.debug("XXVERSION (before increment):"+albVersion);
+                albVersion = Long.toString(albVersionLong+1);
+            }else{
+                logger.debug("XXVERSION setting to 1");
+                albVersion = "1";
+            }
+
+            profileGridObject.setAlbVersion(albVersion);
+            profileGridObject.setAlbUser(user.getUsername());
+            profileGridObject.setCustomFields(CUSTOM_FIELDS);
+            profileGridObject.setProfileAlarmProcessing(profileId);
+            profileGridObject.setControlFileAlarmIdentifier(profileId+ALARM_IDENTIFIER_SUFFIX);
+            profileGridObject.setControlFileParameterExtraction(profileId+PARAMETER_EXTRACT_SUFFIX);
+
+
+            SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            String today = sf.format(new Date());
+            logger.debug("today is:"+today);
+
+
+            profileGridObject.setDateCreated(today);
+
+            logger.info("Inserting Profile: " + profileGridObject.toString());
+            service.insertNewProfile(profileGridObject);
+
+
+            //end insert profile
+
+
+            //insert selection control information into table (now hardcoded albeit blank at the moment)
+            SelectionControlGridObject selectionControlGridObject = new SelectionControlGridObject();
+            selectionControlGridObject.setProfileId(profileId);
+            selectionControlGridObject.setAccessModule(accessModule);
+            selectionControlGridObject.setGlobalClass("");
+            selectionControlGridObject.setDomains("");
+            selectionControlGridObject.setNodeName("");
+            selectionControlGridObject.setSubclass("");
+            selectionControlGridObject.setOriginalAlarmRemain("");
+            selectionControlGridObject.setManagedObjectDiscriminator("");
+            selectionControlGridObject.setAlbVersion(albVersion);
+            selectionControlGridObject.setAlbUser(user.getUsername());
+
+            selectionControlGridObject.setDateCreated(today);
+
+            service.insertNewSelectionControl(selectionControlGridObject);
+
+
+
+//            //increment  albVersion
+//            int versionNumber = Integer.parseInt(albVersion);
+//            albVersion = Integer.toString(versionNumber++);
+//            logger.debug("new version: "+albVersion);
+
+            logger.debug("new version: "+albVersion);
+
+
+            JSONObject mainObj = new JSONObject(dataArray);
+            JSONArray jsonMainArr = mainObj.getJSONArray(JSON_POST_VALUE);
+
+
+            logger.info("JSON Array: " + jsonMainArr.toString());
+            for (int i = 0; i < jsonMainArr.length(); i++) {
+                JSONObject childJSONObject = jsonMainArr.getJSONObject(i);
+
+                String arrayName = "";
+
+                switch (i){
+                    case 30:{ //effectively skip this case
+                        arrayName = JSON_SELECTION_CONTROL;
+                        JSONArray selectionArray = childJSONObject.getJSONArray(arrayName);
+                        logger.info("CHILD ARRAY: "+childJSONObject.toString());
+
+                        for (int j = 0; j < selectionArray.length(); j++) {
+
+                            JSONObject grandChildJSONObject = selectionArray.getJSONObject(j);
+
+                            logger.info("GRANDCHILD ARRAY: "+grandChildJSONObject.toString());
+
+//                            SelectionControlGridObject selectionControlGridObject = new SelectionControlGridObject();
+//                            selectionControlGridObject.setProfileId(profileId);
+//                            selectionControlGridObject.setAccessModule(grandChildJSONObject.getString("accessModule"));
+//                            selectionControlGridObject.setGlobalClass(grandChildJSONObject.getString("globalClass"));
+//                            selectionControlGridObject.setDomains(grandChildJSONObject.getString("domains"));
+//                            selectionControlGridObject.setNodeName(grandChildJSONObject.getString("nodeName"));
+//                            selectionControlGridObject.setSubclass(grandChildJSONObject.getString("subclass"));
+//                            selectionControlGridObject.setOriginalAlarmRemain(grandChildJSONObject.getString("originalAlarmRemain"));
+//                            selectionControlGridObject.setManagedObjectDiscriminator(grandChildJSONObject.getString("managedObjectDiscriminator"));
+//                            selectionControlGridObject.setAlbVersion(albVersion);
+//                            selectionControlGridObject.setAlbUser(user.getUsername());
+//
+//                            selectionControlGridObject.setDateCreated(today);
+//
+//                            service.insertNewSelectionControl(selectionControlGridObject);
+
+                            //TODO error checking
+                        }
+                        break;
+                    }
+                    case 0:{
+                        arrayName = JSON_PARAMETER_EXTRACT;
+                        JSONArray parameterArray = childJSONObject.getJSONArray(arrayName);
+                        logger.info("CHILD ARRAY: "+childJSONObject.toString());
+
+                        for (int j = 0; j < parameterArray.length(); j++) {
+
+                            JSONObject grandChildJSONObject = parameterArray.getJSONObject(j);
+
+                            logger.info("GRANDCHILD ARRAY: "+grandChildJSONObject.toString());
+
+                            ParameterExtractGridObject parameterExtractGridObject = new ParameterExtractGridObject();
+                            parameterExtractGridObject.setProfileId(profileId);
+                            parameterExtractGridObject.setTargetAlarmParameter(grandChildJSONObject.getString("targetAlarmParameter"));
+                            parameterExtractGridObject.setSourceAlarmParameter(grandChildJSONObject.getString("sourceAlarmParameter"));
+                            parameterExtractGridObject.setKeyword(grandChildJSONObject.getString("keyword"));
+                            parameterExtractGridObject.setExtractAfterKeyword(grandChildJSONObject.getString("extractAfterKeyword"));
+                            parameterExtractGridObject.setPostProcessing(grandChildJSONObject.getString("postProcessing"));
+                            parameterExtractGridObject.setAlbVersion(albVersion);
+                            parameterExtractGridObject.setAlbUser(user.getUsername());
+                            parameterExtractGridObject.setRowNum(j);
+
+                            parameterExtractGridObject.setDateCreated(today);
+
+                            service.insertNewParameterExtract(parameterExtractGridObject);
+                            //TODO Error checking
+                        }
+                        break;
+                    }
+                    case 1:{
+                        arrayName = JSON_ALARM_IDENTIFICATION;
+                        JSONArray alarmArray = childJSONObject.getJSONArray(arrayName);
+                        logger.info("CHILD ARRAY: "+childJSONObject.toString());
+
+                        for (int j = 0; j < alarmArray.length(); j++) {
+
+                            JSONObject grandChildJSONObject = alarmArray.getJSONObject(j);
+
+                            logger.info("GRANDCHILD ARRAY: "+grandChildJSONObject.toString());
+
+                            AlarmIdentifierGridObject alarmIdentifierGridObject = new AlarmIdentifierGridObject();
+                            alarmIdentifierGridObject.setProfileId(profileId);
+                            alarmIdentifierGridObject.setEventId(grandChildJSONObject.getString("eventId"));
+                            alarmIdentifierGridObject.setVariables(grandChildJSONObject.getString("variables"));
+                            alarmIdentifierGridObject.setShowAlarm(grandChildJSONObject.getString("showAlarm"));
+                            alarmIdentifierGridObject.setDatabaseTable(grandChildJSONObject.getString("databaseTable"));
+                            alarmIdentifierGridObject.setDatabaseAccess(grandChildJSONObject.getString("databaseAccess"));
+                            alarmIdentifierGridObject.setTableColumns(grandChildJSONObject.getString("tableColumns"));
+                            alarmIdentifierGridObject.setAdditionalText(grandChildJSONObject.getString("additionalText"));
+                            alarmIdentifierGridObject.setProbableCause(grandChildJSONObject.getString("probableCause"));
+                            alarmIdentifierGridObject.setPerceivedSeverity(grandChildJSONObject.getString("perceivedSeverity"));
+                            alarmIdentifierGridObject.setAlarmType(grandChildJSONObject.getString("alarmType"));
+                            alarmIdentifierGridObject.setUserText(grandChildJSONObject.getString("userText"));
+                            alarmIdentifierGridObject.setLabel1(grandChildJSONObject.getString("label1"));
+                            alarmIdentifierGridObject.setLabel2(grandChildJSONObject.getString("label2"));
+                            alarmIdentifierGridObject.setLabel3(grandChildJSONObject.getString("label3"));
+                            alarmIdentifierGridObject.setLabel4(grandChildJSONObject.getString("label4"));
+                            alarmIdentifierGridObject.setLabel5(grandChildJSONObject.getString("label5"));
+                            alarmIdentifierGridObject.setLabel6(grandChildJSONObject.getString("label6"));
+                            alarmIdentifierGridObject.setLabel7(grandChildJSONObject.getString("label7"));
+                            alarmIdentifierGridObject.setLabel8(grandChildJSONObject.getString("label8"));
+                            alarmIdentifierGridObject.setLabel9(grandChildJSONObject.getString("label9"));
+                            alarmIdentifierGridObject.setLabel10(grandChildJSONObject.getString("label10"));
+                            alarmIdentifierGridObject.setAlbVersion(albVersion);
+                            alarmIdentifierGridObject.setAlbUser(user.getUsername());
+                            alarmIdentifierGridObject.setRowNum(j);
+
+                            alarmIdentifierGridObject.setDateCreated(today);
+
+                            service.insertNewAlarmIdentifier(alarmIdentifierGridObject);
+                        }
+                        break;
+                    }
+                }
+            }
+            userAccessAuditService.insertAudit("PROFILE:NEW");
+            return new ResponseEntity<String>(result, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            result = "{success:false}";
+            return new ResponseEntity<String>(result, HttpStatus.OK);
+        }
+    }
+
+
+
+
+
+    /**
+     *
+     * outputDir - base directory where all generated csv files are dumped and put into specific folders with the profilename as name
+     *
+     * This method will execute the translate_csv_files.pl script and provide feedback to the user. Install will be called in another method
+     *
+     *
+     *
+     *
+     * @param mode
+     * @param profileId
+     * @param albVersion
+     * @return
+     */
+    @Deprecated
+    @RequestMapping(value = "executeScript.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> executeScript(@RequestParam String mode, @RequestParam String profileId, @RequestParam String albVersion) {
+        String result = "{\"success\":";
+        String status = SUCCESS_STATUS; //default
+
+        String selectionControlFilename = outputDir+File.separator+profileId+File.separator+profileId+FileMaker.SELECTION_CONTROL_SUFFIX;
+        String profileTableFilename = outputDir+File.separator+profileId+File.separator+profileId+FileMaker.PROFILE_SUFFIX;
+
+
+        logger.debug("profileId is: "+profileId);
+        logger.debug("XXY outputDir is: " + outputDir + " | install filename is: " + installFilename + " | preview filename is: " + previewFilename);
+        logger.debug("XXY mode is: " + mode);
+
+        logger.debug("XXYY translate csv status file name is: " + translateCsvFilename);
+
+        //check if install or preview (only two cases, if not install assume it is for preview)
+        if ("install".equals(mode)) {
+//            fileName = inputDir+File.separator+installFilename;
+
+            //translate the csv files first!
+            ProcessBuilder pb = new ProcessBuilder(translateCsvFilename, selectionControlFilename, profileTableFilename);
+            pb.redirectErrorStream(true); //redirect all messages
+
+            //set working directory!
+            pb.directory(new File(outputDir+File.separator+profileId));
+
+
+            try {
+                Process p = pb.start();
+
+                InputStream in = null;
+                String scriptResult = "";
+
+                in = p.getInputStream();
+
+                scriptResult = convertStreamToStr(in);
+
+                System.out.println("result?: \n" + scriptResult);
+                in.close();
+
+                //call install after translation!
+                String fullInstallFilename = outputDir+File.separator+profileId+File.separator+installFilename;
+                ProcessBuilder installPb = new ProcessBuilder(fullInstallFilename);
+                installPb.redirectErrorStream(true); //send error stream to inputstream as well!
+                //set working directory!
+                installPb.directory(new File(outputDir+File.separator+profileId));
+
+                //reuse! Mother earth will be so proud!
+                p = installPb.start();
+
+                in = p.getInputStream();
+
+                //append the result!
+                scriptResult += "\n\nINSTALL\n\n"+convertStreamToStr(in);
+
+                System.out.println("resultx2?: \n" + scriptResult);
+                in.close();
+
+
+                String escaped = StringEscapeUtils.escapeJavaScript(scriptResult);
+                System.out.println("escaped result?: \n" + escaped);
+
+                result += "true, \"data\":{\"result\":\"" + escaped + "\"}}";
+
+            } catch (IOException e) {
+                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                result += "false, \"data\":{\"result\":\"Error in executing script!\\n" +
+                        "Detailed Error:\\n" + StringEscapeUtils.escapeJavaScript(e.getMessage()) + "\"}}";
+                status = ERROR_STATUS;
+            } finally {
+
+                //update status accordingly
+                ProfileGridObject pgo = new ProfileGridObject();
+                pgo.setProfileId(profileId);
+                pgo.setAlbVersion(albVersion);
+                pgo.setDeployStatus(status);
+                service.updateProfileDeployStatus(pgo);
+
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+        } else {
+//            fileName = inputDir + File.separator + previewFilename;
+
+            ProcessBuilder pb = new ProcessBuilder(previewFilename, selectionControlFilename, profileTableFilename);
+            pb.redirectErrorStream(true); //redirect all messages
+            //set working directory!
+            pb.directory(new File(outputDir+File.separator+profileId));
+
+
+            try {
+                Process p = pb.start();
+
+                InputStream in = null;
+                String scriptResult = "";
+
+                in = p.getInputStream();
+
+                scriptResult = convertStreamToStr(in);
+
+                System.out.println("result?: \n" + scriptResult);
+                in.close();
+                String escaped = StringEscapeUtils.escapeJavaScript(scriptResult);
+                System.out.println("escaped result?: \n" + escaped);
+
+                result += "true, \"data\":{\"result\":\"" + escaped + "\"}}";
+
+            } catch (IOException e) {
+                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                result += "false, \"data\":{\"result\":\"Error in executing script!\\n" +
+                        "Detailed Error:\\n" + StringEscapeUtils.escapeJavaScript(e.getMessage()) + "\"}}";
+                status = ERROR_STATUS;
+            } finally {
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+        }
+    }
+
+    /**
+     *
+     * @param profileId
+     * @param albVersion
+     * @return
+     */
+    @RequestMapping(value = "executeInstallScript.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> executeInstallScript(@RequestParam String profileId, @RequestParam String albVersion) {
+        userAccessAuditService.insertAudit("PROFILE:INSTALL");
+
+        String result = "{\"success\":";
+        String status = SUCCESS_STATUS; //default
+        String scriptResult = "\nTRANSLATE RESULT\n";
+        String accessModule = "";
+
+        String selectionControlFilename = outputDir+File.separator+profileId+File.separator+profileId+FileMaker.SELECTION_CONTROL_SUFFIX;
+        String profileTableFilename = outputDir+File.separator+profileId+File.separator+profileId+FileMaker.PROFILE_SUFFIX;
+
+        //get access module of this profile
+        SelectionControlGridObject selectionControlSearch = new SelectionControlGridObject();
+        selectionControlSearch.setProfileId(profileId);
+        selectionControlSearch.setAlbVersion(albVersion);
+
+        List<SelectionControlGridObject> selectionControlGridObjects = service.getSelectionControl(selectionControlSearch);
+
+        if(selectionControlGridObjects != null && !selectionControlGridObjects.isEmpty()){
+            accessModule = selectionControlGridObjects.get(0).getAccessModule();
+        }
+
+
+
+        logger.debug("XXY outputDir is: " + outputDir + " | install filename is: " + installFilename + " | preview filename is: " + previewFilename);
+        logger.debug("profileId is: "+profileId+" access module is: "+accessModule);
+        logger.debug("XXYY translate csv status file name is: " + translateCsvFilename);
+
+        ProcessBuilder pb = new ProcessBuilder(translateCsvFilename, selectionControlFilename, profileTableFilename);
+        pb.redirectErrorStream(true); //redirect all messages
+
+        //set working directory!
+        pb.directory(new File(outputDir+File.separator+profileId));
+
+
+        try {
+            Process p = pb.start();
+
+            InputStream in = null;
+
+            in = p.getInputStream();
+
+            scriptResult += convertStreamToStr(in) + "\nClick on Install or Update to continue...";
+
+            System.out.println("result?: \n" + scriptResult);
+            in.close();
+
+            //edit the generated install script to change the name
+            boolean fileModifyResult = modifyInstallScript(profileId, accessModule);
+
+            if(!fileModifyResult){
+                scriptResult += "\nError in executing script!\nDetailed Error:\n" + "Issue in modifying install script! Contact administrator\n";
+                status = ERROR_STATUS;
+                //update status accordingly, only for error
+                ProfileGridObject pgo = new ProfileGridObject();
+                pgo.setProfileId(profileId);
+                pgo.setAlbVersion(albVersion);
+                pgo.setDeployStatus(status);
+                service.updateProfileDeployStatus(pgo);
+            }
+
+            String escaped = StringEscapeUtils.escapeJavaScript(scriptResult);
+            System.out.println("escaped result?: \n" + escaped);
+            result += "true, \"data\":{\"result\":\"" + escaped + "\"}}";
+
+        } catch (IOException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            scriptResult += "\nError in executing script!\nDetailed Error:\n" + e.getMessage();
+            result += "false, \"data\":{\"result\":\""+StringEscapeUtils.escapeJavaScript(scriptResult)+"\"}}";
+            status = ERROR_STATUS;
+
+            //update status accordingly, only for error
+            ProfileGridObject pgo = new ProfileGridObject();
+            pgo.setProfileId(profileId);
+            pgo.setAlbVersion(albVersion);
+            pgo.setDeployStatus(status);
+            service.updateProfileDeployStatus(pgo);
+        } finally {
+            return new ResponseEntity<String>(result, HttpStatus.OK);
+        }
+    }
+
+
+    /**
+     *
+     * @param profileId
+     * @param accessModule
+     * @return
+     */
+    private boolean modifyInstallScript(String profileId, String accessModule){
+
+        String tmpFilename = outputDir+File.separator+profileId+ File.separator + "tmpInstall";
+        String oldFilename =  outputDir+File.separator+profileId + File.separator + installFilename;
+
+        logger.debug("old filename: "+oldFilename);
+        logger.debug("tmp filename: "+tmpFilename);
+
+        BufferedReader br = null;
+        BufferedWriter bw = null;
+
+        try {
+            br = new BufferedReader(new FileReader(oldFilename));
+            bw = new BufferedWriter(new FileWriter(tmpFilename));
+
+            Pattern p = Pattern.compile("(?<=create mcc 0 corrective_filter ).*(?=\\s-)");
+            Pattern p2 = Pattern.compile("(?<=resume mcc 0 corrective_filter ).*");
+
+            String line;
+
+            while ((line = br.readLine()) != null) {
+                logger.debug("line is: "+line);
+                Matcher m = p.matcher(line);
+                Matcher m2 = p2.matcher(line);
+
+                if(m.find()){
+                    line = m.replaceFirst("ZZ_alb_"+profileId+"_"+accessModule);
+                    logger.debug("line matched to m"+line);
+                }
+
+                if(m2.find()){
+                    line = m2.replaceFirst("ZZ_alb_"+profileId+"_"+accessModule);
+                    logger.debug("line matched to m2"+line);
+                }
+                bw.write(line+"\n");
+            }
+
+        }catch (IOException ie){
+            logger.debug("error found!");
+            ie.printStackTrace();
+            return false;
+        }finally{
+            try {
+                if(br != null)
+                    br.close();
+            } catch (IOException e) {
+                //
+            }
+            try {
+                if(bw != null)
+                    bw.close();
+            } catch (IOException e) {
+                //
+            }
+        }
+
+        // Once everything is complete, delete old file..
+        File oldFile = new File(oldFilename);
+
+        // And rename tmp file's name to old file name
+        File newFile = new File(tmpFilename);
+        newFile.setExecutable(oldFile.canExecute());
+        newFile.setReadable(oldFile.canRead());
+        newFile.setWritable(oldFile.canWrite());
+
+
+        oldFile.delete();
+        newFile.renameTo(oldFile);
+
+        return true;
+    }
+
+
+    /**
+     *
+     * outputDir - base directory where all generated csv files are dumped and put into specific folders with the profilename as name
+     *
+     * Executes install script after translating the csv files
+     *
+     *
+     *
+     * @param mode - install (function of creating profile, user must be admin) - update (update existing alarm)
+     * @param profileId
+     * @param albVersion
+     * @return
+     *
+     */
+    @RequestMapping(value = "continueInstall.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> continueInstall(@RequestParam String mode, @RequestParam String profileId, @RequestParam String albVersion) {
+        String result = "{\"success\":";
+        String status = SUCCESS_STATUS; //default
+        String scriptResult = "";
+
+        logger.debug("XXY outputDir is: " + outputDir);
+        logger.debug("profileId is: "+profileId);
+        logger.debug("mode is: "+mode);
+
+        try {
+            //call install after translation!
+            String fullInstallFilename = outputDir + File.separator + profileId + File.separator + installFilename;
+            String fullUpdateFilename = outputDir + File.separator + profileId + File.separator + updateFilename;
+
+            String selectedOperationFileName = "";
+
+            if("install".equals(mode)){
+                selectedOperationFileName = fullInstallFilename;
+                scriptResult = "\nINSTALL RESULT\n";
+            }else{
+                selectedOperationFileName = fullUpdateFilename;
+                scriptResult = "\nUPDATE RESULT\n";
+            }
+
+
+
+            ProcessBuilder installPb = new ProcessBuilder(selectedOperationFileName);
+            installPb.redirectErrorStream(true); //send error stream to inputstream as well!
+            //set working directory!
+            installPb.directory(new File(outputDir + File.separator + profileId));
+
+            Process p = installPb.start();
+            InputStream in = null;
+
+            in = p.getInputStream();
+
+            //append the result!
+            scriptResult += convertStreamToStr(in);
+
+            System.out.println("resultx2?: \n" + scriptResult);
+            in.close();
+
+
+            String escaped = StringEscapeUtils.escapeJavaScript(scriptResult);
+            System.out.println("escaped result?: \n" + escaped);
+
+            result += "true, \"data\":{\"result\":\"" + escaped + "\"}}";
+
+        } catch (IOException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            scriptResult += "\nError in executing script!\nDetailed Error:\n" + e.getMessage();
+            result += "false, \"data\":{\"result\":\""+StringEscapeUtils.escapeJavaScript(scriptResult)+"\"}}";
+            status = ERROR_STATUS;
+        } finally {
+
+            //update status accordingly
+            ProfileGridObject pgo = new ProfileGridObject();
+            pgo.setProfileId(profileId);
+            pgo.setAlbVersion(albVersion);
+            pgo.setDeployStatus(status);
+            service.updateProfileDeployStatus(pgo);
+
+            return new ResponseEntity<String>(result, HttpStatus.OK);
+        }
+
+    }
+
+
+    /**
+     *
+     * TODO sample file has to be created first and passed to the preview script!
+     * @param profileId
+     * @param albVersion
+     * @return
+     */
+    @RequestMapping(value = "executePreviewScript.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> executePreviewScript(@RequestParam String profileId, @RequestParam String albVersion) {
+        userAccessAuditService.insertAudit("PROFILE:PREVIEW");
+
+        String result = "{\"success\":";
+        String status = SUCCESS_STATUS; //default
+        String scriptResult = "\nPREVIEW RESULT\n";
+
+        String selectionControlFilename = outputDir+File.separator+profileId+File.separator+profileId+FileMaker.SELECTION_CONTROL_SUFFIX;
+        String profileTableFilename = outputDir+File.separator+profileId+File.separator+profileId+FileMaker.PROFILE_SUFFIX;
+        String sampleAlarmFile = "";
+
+
+        logger.debug("XXY outputDir is: " + outputDir + " | install filename is: " + installFilename + " | preview filename is: " + previewFilename);
+
+        ProcessBuilder pb = new ProcessBuilder(previewFilename, selectionControlFilename, profileTableFilename);
+        pb.redirectErrorStream(true); //redirect all messages
+        //set working directory!
+        pb.directory(new File(outputDir+File.separator+profileId));
+
+
+        try {
+            Process p = pb.start();
+
+            InputStream in = null;
+
+            in = p.getInputStream();
+
+            scriptResult = convertStreamToStr(in);
+
+            System.out.println("result?: \n" + scriptResult);
+            in.close();
+            String escaped = StringEscapeUtils.escapeJavaScript(scriptResult);
+            System.out.println("escaped result?: \n" + escaped);
+
+            result += "true, \"data\":{\"result\":\"" + escaped + "\"}}";
+
+        } catch (IOException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            scriptResult += "\nError in executing script!\nDetailed Error:\n" + e.getMessage();
+            result += "false, \"data\":{\"result\":\""+StringEscapeUtils.escapeJavaScript(scriptResult)+"\"}}";
+            status = ERROR_STATUS;
+        } finally {
+            return new ResponseEntity<String>(result, HttpStatus.OK);
+        }
+    }
+
+
+
+    /**
+     * profileId or filename?
+     * NOTE: ProcessBuilder is not synchronized!
+     *
+     *
+     * @param profileId
+     * @param albVersion
+     * @return
+     */
+    @RequestMapping(value = "createFiles.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> createFiles(@RequestParam String profileId, @RequestParam String albVersion) {
+        String result = "";
+        String status = SUCCESS_STATUS; //default is success
+
+
+        logger.debug("XXY outputDir is: "+outputDir+" | install filename is: "+installFilename+" | deploy filename is: "+ previewFilename);
+
+        //get Single Profile
+        ProfileGridObject profileSearch = new ProfileGridObject();
+        profileSearch.setProfileId(profileId);
+        profileSearch.setAlbVersion(albVersion);
+
+        SelectionControlGridObject selectionControlSearch = new SelectionControlGridObject();
+        selectionControlSearch.setProfileId(profileId);
+        selectionControlSearch.setAlbVersion(albVersion);
+
+        ParameterExtractGridObject parameterExtractSearch = new ParameterExtractGridObject();
+        parameterExtractSearch.setProfileId(profileId);
+        parameterExtractSearch.setAlbVersion(albVersion);
+
+        AlarmIdentifierGridObject alarmIdentifierSearch = new AlarmIdentifierGridObject();
+        alarmIdentifierSearch.setProfileId(profileId);
+        alarmIdentifierSearch.setAlbVersion(albVersion);
+
+        List<ProfileGridObject> profileGridObject = service.getSingleProfile(profileSearch);
+        List<SelectionControlGridObject> selectionControlGridObjects = service.getSelectionControl(selectionControlSearch);
+        List<ParameterExtractGridObject> parameterExtractGridObjects = service.getParameterExtract(parameterExtractSearch);
+        List<AlarmIdentifierGridObject> alarmIdentifierGridObjects = service.getAlarmIdentifier(alarmIdentifierSearch);
+
+        //checking if any of the arrays are null or empty
+        if((profileGridObject == null || profileGridObject.isEmpty()) ||
+                (selectionControlGridObjects == null || selectionControlGridObjects.isEmpty()) ||
+                (parameterExtractGridObjects == null || parameterExtractGridObjects.isEmpty()) ||
+                (alarmIdentifierGridObjects == null || alarmIdentifierGridObjects.isEmpty())){
+            result = "{success:false, errors:{reason:'Missing data in one of the tables'}}";
+            status = ERROR_STATUS;
+        }else{
+            //try creating the file
+            int createFileResult = FileMaker.generateFiles(outputDir, profileGridObject.get(0), selectionControlGridObjects,
+                    parameterExtractGridObjects, alarmIdentifierGridObjects );
+
+            //determine result if success (0)
+            if(createFileResult != 0){
+                result = "{success:false, errors:{reason:'Error in creating the files'}}";
+                status = ERROR_STATUS;
+            }else{
+                result = "{success:true}";
+            }
+        }
+
+        //update status
+        ProfileGridObject pgo = new ProfileGridObject();
+        pgo.setProfileId(profileId);
+        pgo.setAlbVersion(albVersion);
+        pgo.setTranslateStatus(status);
+        service.updateProfileTranslateStatus(pgo);
+
+        userAccessAuditService.insertAudit("PROFILE:DEPLOY");
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+    }
+
+
+    /**
+     *
+     * @param is
+     * @return
+     * @throws IOException
+     */
+    public static String convertStreamToStr(InputStream is) throws IOException {
+
+        if (is != null) {
+            Writer writer = new StringWriter();
+
+            char[] buffer = new char[1024];
+            try {
+                Reader reader = new BufferedReader(new InputStreamReader(is,
+                        "UTF-8"));
+                int n;
+                while ((n = reader.read(buffer)) != -1) {
+                    writer.write(buffer, 0, n);
+                }
+            } finally {
+                is.close();
+            }
+            return writer.toString();
+        }
+        else {
+            return "";
+        }
+    }
+
+}
+

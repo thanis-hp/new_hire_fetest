@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:sec="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd
+     http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+     http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd
+     http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-2.0.4.xsd">
+
+    <!-- in-memory database and a datasource -->
+   <jdbc:embedded-database id="dataSource">
+        <jdbc:script location="classpath:database/schema.sql"/>
+        <jdbc:script location="classpath:database/dataload.sql"/>
+    </jdbc:embedded-database>
+
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="location" value="classpath:database.properties"/>
+    </bean>
+
+    <!--<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">-->
+        <!--<property name="username" value="temip" />-->
+        <!--<property name="password" value="temip123" />-->
+        <!--<property name="poolPreparedStatements" value="false"/>-->
+        <!--<property name="driverClassName" value="oracle.jdbc.driver.OracleDriver" />-->
+        <!--<property name="url" value="jdbc:oracle:thin:@193.168.1.160:1521:mysql" />-->
+    <!--</bean>-->
+
+    <!--bean id="mySQL-dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+        <property name="url" value="jdbc:mysql://10.242.43.237:3306/rawdb" />
+        <property name="username" value="oss" />
+        <property name="password" value="oss" />
+        <property name="poolPreparedStatements" value="false"/>
+    </bean>-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+
+    <!--<bean id="transactionManager-mySQL" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="mySQL-dataSource"/>
+    </bean>-->
+
+
+
+    <!-- enable component scanning (beware that this does not enable mapper scanning!) -->
+    <context:component-scan base-package="com.hp.temip.alb_gui.service"/>
+
+    <!-- enable autowire -->
+    <context:annotation-config/>
+
+    <!-- enable transaction demarcation with annotations -->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <!-- define the SqlSessionFactory -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="typeAliasesPackage" value="com.hp.temip.alb_gui.domain"/>
+    </bean>
+
+   <!-- <bean id="sqlSessionFactory1" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="mySQL-dataSource"/>
+        <property name="typeAliasesPackage" value="com.hp.temip.polyDomain"/>
+    </bean>-->
+
+	<!-- scan for mappers and let them be autowired -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.hp.temip.alb_gui.dao"/>
+        <property name="sqlSessionFactory" ref="sqlSessionFactory" />
+    </bean>
+
+   <!-- <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.hp.temip.polyDao"/>
+        <property name="sqlSessionFactory" ref="sqlSessionFactory1" />
+    </bean>-->
+
+</beans>

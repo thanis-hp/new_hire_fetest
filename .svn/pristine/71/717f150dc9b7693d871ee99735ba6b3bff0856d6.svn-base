@@ -1,0 +1,173 @@
+INSERT INTO USERS (USER_ID,USERNAME,PASSWORD,ENABLED, NAME, DEPT) VALUES (100, 'user', '098f6bcd4621d373cade4e832627b4f6', 1, 'USER 1', 'CELCOM OPERATIONS');
+INSERT INTO USER_ROLES (USER_ROLE_ID,USER_ID,AUTHORITY) VALUES (1, 100, 'ROLE_USER');
+INSERT INTO USERS (USER_ID,USERNAME,PASSWORD,ENABLED, NAME, DEPT) VALUES (101, 'admin', '098f6bcd4621d373cade4e832627b4f6', 1, 'ADMIN 1', 'CELCOM ADMIN');
+INSERT INTO USER_ROLES (USER_ROLE_ID,USER_ID,AUTHORITY) VALUES (2, 101, 'ROLE_ADMIN');
+
+
+INSERT INTO ALB_ALARMSAMPLE (ALARM_NAME, ALARM_TEXT, ALARM_REMARK) VALUES ('ALARM SAMPLE 1', 'OPERATION_CONTEXT temip_ns:.eric_bss_fs1_oc alarm_object 6007636
+On director: temip_ns:.temip.cel_temipfsvr1_director
+AT 2013-07-12-12:19:57 All Attributes
+
+                             Identifier = 6007636
+                                  State = Outstanding
+                         Problem Status = Not-Handled
+                  Clearance Report Flag = False
+                        Escalated Alarm = False
+                     Creation Timestamp = 2013-07-12-01:09:56
+            Last Modification Timestamp = 2013-07-12-01:10:08
+                         Managed Object = ERICSSON_OSSRC temip_ns:.TMOS_F1
+                        Target Entities = { ERICSSON_OSSRC temip_ns:.TMOS_F1 }
+                             Alarm Type = EquipmentAlarm
+                             Event Time = 2013-07-12-01:08:00
+                         Probable Cause = 61331
+                      Specific Problems = { 61088 }
+                Notification Identifier = 276359420
+                                 Domain = Domain temip_ns:.dm_fs1_eric_bss
+                           Alarm Origin = IncomingAlarm
+                     Perceived Severity = Critical
+                        Additional Text = "BSC15,n/a: DIGITAL PATH FAULT SUPERVISION,
+                                          Different_causes_possible_for_same_message
+                                          aAa:GSM:ZYX:DIGITAL PATH FAULT SUPERVISION:
+                                          L01=DIGITAL PATH FAULT SUPERVISION,
+                                          Different_causes_possible_for_same_message#L02=Central#L03=BSC15#L04=n/a
+                                          #L05=#
+                                          L11=#L12=#L13=BSC15#L14=n/a#L15=#
+                                          zZz:
+
+                                          ===SOM===
+                                          MessageType=Alarm
+                                          NotificationId=276359420
+                                          CorrelatedNotifications=-2
+                                          EventTime=20130712010800
+                                          EventType=4 (EquipmentAlarm)
+                                          ProbableCause=61331
+                                          PerceivedSeverity=1 (Critical)
+                                          SpecificProblem=61088
+                                          ObjectOfReference=TMOS,EQ=BSC15
+                                          ManagedObject=EQ BSC15
+                                          Acknowledge=0
+                                          EventTypeText=EquipmentAlarm
+                                          ProbableCauseText=Different_causes_possible_for_same_message
+                                          SpecificProblemText=DIGITAL PATH FAULT SUPERVISION
+                                          ProposedRepairActionText=
+                                          AdditionalText=
+                                          ===RAW===
+                                           %a
+                                          -EventTime=20130712010800
+                                          -RecordType=1
+                                          -EventType=61037
+                                          -ObjectClassOfReference=21
+                                          -ObjectOfReference=TMOS,EQ=BSC15
+                                          -PerceivedSeverity=1
+                                          -ProbableCause=61331
+                                          -ProposedRepairAction=1011
+                                          -SpecificProblem=61088
+                                          -AlarmNumber=928
+                                          -Acknowledge=0
+                                          -NotificationIdentifier=276359420
+                                          -CorrelatedRecord=-2
+                                          -FmAlarmId=276359420
+                                          *** ALARM 928 A1/SWDEV ""BSC15 00/00/240""A 130712 0108
+                                          DIGITAL PATH FAULT SUPERVISION
+                                          DIP      DIPEND   FAULT     SECTION   HG  DATE    TIME
+                                          119RBLT           LOS                     130712  010803
+                                          END
+                                          %A
+                                          ===EOM===
+                                          <ALM_ID>276359420<ALM_ID>"
+                      Original Severity = Critical
+                    Original Event Time = 2013-07-12-01:08:00
+                              User Text = "#ZYX#GSM8:ERICSSON#"
+                    Problem Occurrences = 1 Problems
+               GPP3 Problem Occurrences = 0 Problems
+           Critical Problem Occurrences = 1 Problems
+              Major Problem Occurrences = 0 Problems
+              Minor Problem Occurrences = 0 Problems
+            Warning Problem Occurrences = 0 Problems
+      Indeterminate Problem Occurrences = 0 Problems
+              Clear Problem Occurrences = 0 Problems
+                               SA Total = 0 Alarms
+                                RASS ID = "PatternOK:257"
+                                Visible = "Y"
+                                Label 1 = "DIGITAL PATH FAULT SUPERVISION,
+                                          Different_causes_possible_for_same_message"
+                                Label 2 = "Central"
+                                Label 3 = "BSC15"
+                                Label 4 = "n/a"
+                                Label 5 = ""
+                                Label 8 = ""
+                                Label 9 = "n/a"
+                               Label 10 = "BSC15"', 'TEST SAMPLE ALARM');
+
+
+INSERT INTO ALB_PROFILETABLE(
+  PROFILE_ID,
+  PROFILE_ALARM_PROCESSING,
+  CTRL_FILE_PARAMETER_EXTRACTION,
+  CTRL_FILE_ALARM_IDENTIFIER,
+  CUSTOM_FIELDS,
+  DATE_CREATED,
+  ALB_VERSION,
+  ALB_USER) VALUES (
+  'test_ovo_AT',
+  'test_ovo_AT',
+  'test_ovo_AT_parameterextraction.csv',
+  'test_ovo_AT_alarmidentifier.csv',
+  'custom_fields.csv',
+  '2013-09-01 00:00:00',
+  '1',
+  'admin');
+
+INSERT INTO ALB_HOST (PROFILE_ID,
+                      HOST_NAME,
+                      HOST_IP,
+                      TRANSLATE_STATUS,
+                      DEPLOY_STATUS,
+                      LAST_TRANSLATE,
+                      LAST_DEPLOY,
+                      ALB_VERSION)
+  VALUES ('test_ovo_AT',
+          'temipfsvr1',
+          '10.1.100.153',
+          'PENDING',
+          'PENDING',
+          '2013-09-01 00:00:00',
+          '2013-09-01 00:00:00',
+          1);
+
+INSERT INTO ALB_SELCTRL(ACCESS_MODULE, GLOBAL_CLASS, DOMAINS, NODE_NAME, SUBCLASS, ORIGINAL_ALARM_REMAIN, PROFILE_ID, MANAGED_OBJECT_DISCRIMINATOR, DATE_CREATED, ALB_VERSION, ALB_USER) VALUES
+('ovo_am','*','','','','no','test_ovo_AT','','2013-09-01 12:00:00', '1', 'admin');
+INSERT INTO ALB_PARAMEXTRACT(PROFILE_ID, TARGET_ALARM_PARAMETER, SOURCE_ALARM_PARAMETER, KEYWORD, EXTRACT_AFTER_KEYWORD, POST_PROCESSING, ALB_VERSION, ALB_USER, DATE_CREATED, ROW_NUM) VALUES
+('test_ovo_AT','Event-ID','Managed Object','','Word1', '','1','admin', '2013-09-01 00:00:00', 1);
+INSERT INTO ALB_PARAMEXTRACT(PROFILE_ID, TARGET_ALARM_PARAMETER, SOURCE_ALARM_PARAMETER, KEYWORD, EXTRACT_AFTER_KEYWORD, POST_PROCESSING, ALB_VERSION, ALB_USER, DATE_CREATED, ROW_NUM) VALUES
+('test_ovo_AT','$MESSAGEGROUP','Additional Text','Message Group ','Word2', '','1','admin', '2013-09-01 00:00:00',2);
+
+INSERT INTO ALB_PARAMEXTRACT(PROFILE_ID, TARGET_ALARM_PARAMETER, SOURCE_ALARM_PARAMETER, KEYWORD, EXTRACT_AFTER_KEYWORD, POST_PROCESSING, ALB_VERSION, ALB_USER, DATE_CREATED, ROW_NUM) VALUES
+('test_ovo_AT','$NODE','Managed Object','','Word2', 'uppercase($NODE);between($NODE, "\" ", "\"")','1','admin', '2013-09-01 00:00:00',3);
+
+INSERT INTO ALB_PARAMEXTRACT(PROFILE_ID, TARGET_ALARM_PARAMETER, SOURCE_ALARM_PARAMETER, KEYWORD, EXTRACT_AFTER_KEYWORD, POST_PROCESSING, ALB_VERSION, ALB_USER, DATE_CREATED, ROW_NUM) VALUES
+('test_ovo_AT','$APPLICATION','Additional Text','Application ','Word2', '','1','admin', '2013-09-01 00:00:00',4);
+
+INSERT INTO ALB_ALARMIDENTIFIER(PROFILE_ID, EVENT_ID, VARIABLES, SHOW_ALARM, DATABASE_TABLE, DATABASE_ACCESS, TABLE_COLUMNS, ADDITIONAL_TEXT, PROBABLE_CAUSE, PERCEIVED_SEVERITY, ALARM_TYPE, LABEL1, LABEL2, LABEL3, LABEL4, ALB_VERSION, ALB_USER, DATE_CREATED, ROW_NUM, USERTEXT, LABEL5, LABEL6, LABEL7, LABEL8, LABEL9, LABEL10) VALUES
+('test_ovo_AT', 'OVO_NODE','','yes','','','','$NODE ++ " : " ++ Additional Text ++ "\nAB Processed"','','','','$NODE','','','Additional Text', '1', 'admin','2013-09-01 00:00:00',1,'','','','','','','');
+
+INSERT INTO ALB_ALARMIDENTIFIER(PROFILE_ID, EVENT_ID, VARIABLES, SHOW_ALARM, DATABASE_TABLE, DATABASE_ACCESS, TABLE_COLUMNS, ADDITIONAL_TEXT, PROBABLE_CAUSE, PERCEIVED_SEVERITY, ALARM_TYPE, LABEL1, LABEL2, LABEL3, LABEL4, ALB_VERSION, ALB_USER, DATE_CREATED, ROW_NUM, USERTEXT, LABEL5, LABEL6, LABEL7, LABEL8, LABEL9, LABEL10) VALUES
+('test_ovo_AT','error','','yes','','','','"An error occurred during processing of the Alarm Beautifier: " ++ $ErrorText ++ " Original Additional Text: " ++ Additional Text','Unknown','Indeterminate','','$NODE','','','','1','admin','2013-09-01 00:00:00',2,'','','','','','','');
+
+INSERT INTO ALB_ALARMIDENTIFIER(PROFILE_ID, EVENT_ID, VARIABLES, SHOW_ALARM, DATABASE_TABLE, DATABASE_ACCESS, TABLE_COLUMNS, ADDITIONAL_TEXT, PROBABLE_CAUSE, PERCEIVED_SEVERITY, ALARM_TYPE, LABEL1, LABEL2, LABEL3, LABEL4, ALB_VERSION, ALB_USER, DATE_CREATED, ROW_NUM, USERTEXT, LABEL5, LABEL6, LABEL7, LABEL8, LABEL9, LABEL10) VALUES
+('test_ovo_AT','default','','yes','','','','Additional Text ++ "\nAB Processed"','','','','$NODE','','','','1','admin','2013-09-01 00:00:00',3,'','','','','','','');
+
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (1, 'ericsson_ossrc_am', 'ericsson_ossrc_am' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (1, 'ericsson_ossrc_crb_am', 'ericsson_ossrc_crb_am' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (1, 'huawei_m2000_am', 'huawei_m2000_am' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (1, 'hw_t2000_am', 'hw_t2000_am' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (1, 'hw_u2000_am', 'hw_u2000_am' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (1, 'nokia_netact_am', 'nokia_netact_am' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (1, 'NNMi_AM', 'NNMi_AM' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (1, 'ovo_am', 'ovo_am' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (1, 'tellabs_8100_am', 'tellabs_8100_am' );
+
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (2, 'Yes', 'yes' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (2, 'No', 'no' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (2, 'No Error', 'no error' );
+INSERT INTO ALB_REFERENCE (REF_CAT, REF_NAME, REF_VALUE) values (2, 'Ignore DB Error', 'ignore_db_error' );

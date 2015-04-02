@@ -1,0 +1,35 @@
+##localdev
+#script.outputdir=C:\\testelito
+#script.install.filename=install.bat
+#script.update.filename=update.bat
+#script.uninstall.filename=uninstall.bat
+#script.preview.filename=C:\\testelito\\preview.bat
+#script.translatecsv.filename=C:\\testelito\\translate.bat
+#script.samplealarm.filename=sample_alarm.txt
+#script.preview.logfilelocation=C:\\testelito\\traces
+#script.temipdir=C:\\testelito
+
+
+#dev
+
+script.outputdir=/usr/opt/temip/ALB
+script.install.filename=install
+script.update.filename=update
+script.uninstall.filename=uninstall
+script.preview.filename=test_mapping.pl
+script.translatecsv.filename=translate_csv_files.pl
+script.samplealarm.filename=sample_alarm.txt
+script.preview.logfilelocation=/var/opt/temip/alarm_beautifier/traces
+script.temipdir=/usr/opt/temip/bin
+
+
+
+
+
+
+
+#strings used by the program
+#error event id which will be defaulted in newly created profiles
+alarm.error="An error occurred during processing of the Alarm Beautifier: " ++ $ErrorText ++ " Original Additional Text: " ++ Additional Text
+#default event id which will be defaulted in newly created profiles
+alarm.default=Additional Text ++ "\nAB Processed"

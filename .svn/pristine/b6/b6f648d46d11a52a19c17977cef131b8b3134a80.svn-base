@@ -1,0 +1,125 @@
+function getTopologyKBGrid() {
+
+    var topologyKBStore = new Ext.data.JsonStore({
+        storeId:'topologyKBGridStore',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getKBNewByNodeId.htm',
+            reader:{
+                type:'json',
+                root:'topologyKB'
+            },
+            params:{equipName:'', status:''}
+        },
+
+        fields:['createdDate', 'description', 'userName']
+    });
+
+    var topologyKBGrid = Ext.create('Ext.grid.Panel', {
+        id:'topologyKBGrid',
+        store:topologyKBStore,
+        columns:[
+            Ext.create('Ext.grid.RowNumberer'),
+            {text:"Created Date", width:150, sortable:false, dataIndex:'createdDate'},
+            {text:"Created By", width:100, sortable:false, dataIndex:'userName'},
+            {text:"Description", flex:1, sortable:false, dataIndex:'description'}
+        ],
+        columnLines:false,
+        collapsible:false,
+        title:'Knowledge Base',
+        iconCls:'icon-grid',
+        autoScroll:true,
+        tbar:[
+            {
+                xtype:'textfield',
+                labelAlign:'left',
+                labelWidth:120,
+                fieldLabel:'New Knowledge Base',
+                width:400,
+                id:'kbDescription',
+                name:'description',
+                allowBlank:true
+            },
+            {
+                xtype:'button',
+                iconCls:'icon-save',
+                text:'Add Knowledge Base',
+                handler:function () {
+                    //return false;
+
+                    console.log(selectedNode, selectedNodeStatus);
+                    if (selectedNode != undefined && selectedNodeStatus != undefined && selectedNode != '' && selectedNodeStatus != '') {
+                        if (Ext.getCmp('kbDescription').getValue() != '') {
+                            Ext.getBody().mask('Adding new knowledge base...');
+                            Ext.Ajax.request({
+                                url:'addNewKB.htm',
+                                method:'POST',
+                                params:{
+                                    equipName:selectedNode,
+                                    deviceStatus:selectedNodeStatus,
+                                    description:Ext.getCmp('kbDescription').getValue()
+                                },
+                                success:function (response) {
+                                    Ext.getBody().unmask();
+                                    topologyKBStore.reload();
+                                    Ext.getCmp('kbDescription').setValue("");
+                                },
+                                failure:function (response) {
+                                    Ext.getBody().unmask();
+                                    Ext.Msg.alert('Fail', 'Failed to insert new Knowledge Base.');
+                                }
+
+                            });
+                        } else {
+                            Ext.Msg.alert('Error', 'Please enter description');
+                        }
+                    } else {
+                        Ext.Msg.alert('Error', 'Please select a node');
+                    }
+
+                }
+            },
+            {
+                xtype:'button',
+                iconCls:'icon-refresh',
+                text:'Refresh',
+                handler:function () {
+                    if (selectedNode != undefined && selectedNodeStatus != undefined && selectedNode != '' && selectedNodeStatus != '') {
+                        topologyKBStore.reload();
+                    } else {
+                        Ext.Msg.alert('Error', 'Please select a node');
+                        topologyKBStore.load({
+                            params:{
+                                equipName: '',
+                                status: ''}
+                        });
+                    }
+                }
+            }
+
+        ],
+        listeners:{
+            activate:function (grid, eOpts) {
+                if (selectedNode != undefined && selectedNodeStatus != undefined && selectedNode != '' && selectedNodeStatus != '') {
+                    topologyKBStore.load({
+                        params:{
+                            equipName: selectedNode,
+                            status: selectedNodeStatus}
+                    });
+                } else {
+                    topologyKBStore.load({
+                        params:{
+                            equipName: '',
+                            status: ''}
+                    });
+                }
+            }
+        }
+    });
+
+
+    return topologyKBGrid;
+}
+
+

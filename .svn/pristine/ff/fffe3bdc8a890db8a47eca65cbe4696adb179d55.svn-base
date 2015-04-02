@@ -1,0 +1,86 @@
+package com.hp.temip.alb_gui.service;
+
+import com.hp.temip.alb_gui.dao.ProfileMapper;
+import com.hp.temip.alb_gui.domain.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 8/16/12
+ * Time: 12:08 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Service("ProfileService")
+@Transactional(readOnly = false)
+public class ProfileService {
+    @Autowired
+    private ProfileMapper profileMapper;
+
+
+    public List<ProfileGridObject> getProfileList() {
+        return (List<ProfileGridObject>) profileMapper.getProfileList();
+    }
+
+    public int updateProfileTranslateStatus(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.updateProfileTranslateStatus(profileGridObject);
+    }
+
+    public int updateProfileDeployStatus(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.updateProfileDeployStatus(profileGridObject);
+    }
+
+
+    public long getTopAlbVersion(String profileId) {
+        return (long) profileMapper.getTopAlbVersion(profileId);
+    }
+
+    public List<ProfileGridObject> checkProfileExists(String profileId) {
+        return (List<ProfileGridObject>) profileMapper.checkProfileExists(profileId);
+    }
+
+    public List<ProfileGridObject> getSingleProfile(ProfileGridObject profileGridObject) {
+        return (List<ProfileGridObject>) profileMapper.getSingleProfile(profileGridObject);
+    }
+
+    public int insertNewProfile(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.insertNewProfile(profileGridObject);
+    }
+
+    public int removeProfile(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.removeProfile(profileGridObject);
+    }
+
+
+
+
+
+    public List<SelectionControlGridObject> getSelectionControl(SelectionControlGridObject selectionControlGridObject) {
+        return (List<SelectionControlGridObject>) profileMapper.getSelectionControl(selectionControlGridObject);
+    }
+
+    public List<ParameterExtractGridObject> getParameterExtract(ParameterExtractGridObject parameterExtractGridObject) {
+        return (List<ParameterExtractGridObject>) profileMapper.getParameterExtract(parameterExtractGridObject);
+    }
+
+    public List<AlarmIdentifierGridObject> getAlarmIdentifier(AlarmIdentifierGridObject alarmIdentifierGridObject) {
+        return (List<AlarmIdentifierGridObject>) profileMapper.getAlarmIdentifier(alarmIdentifierGridObject);
+    }
+
+
+    public int insertNewSelectionControl(SelectionControlGridObject selectionControlGridObject){
+        return (int) profileMapper.insertNewSelectionControl(selectionControlGridObject);
+    }
+
+    public int insertNewParameterExtract(ParameterExtractGridObject parameterExtractGridObject){
+        return (int) profileMapper.insertNewParameterExtract(parameterExtractGridObject);
+    }
+
+    public int insertNewAlarmIdentifier(AlarmIdentifierGridObject alarmIdentifierGridObject){
+        return (int) profileMapper.insertNewAlarmIdentifier(alarmIdentifierGridObject);
+    }
+}

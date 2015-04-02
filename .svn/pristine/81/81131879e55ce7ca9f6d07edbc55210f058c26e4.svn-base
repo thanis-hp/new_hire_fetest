@@ -1,0 +1,263 @@
+package com.hp.temip.alb_gui.domain;
+
+import org.apache.commons.lang.StringUtils;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 8/29/13
+ * Time: 3:18 PM
+ * To change this template use File | Settings | File Templates.
+ */
+public class AlarmIdentifierGridObject {
+
+    private String eventId;
+    private String variables;
+    private String showAlarm;
+    private String databaseTable;
+    private String databaseAccess;
+    private String tableColumns;
+    private String additionalText;
+    private String probableCause;
+    private String perceivedSeverity;
+    private String alarmType;
+    private String userText;
+    private String label1;
+    private String label2;
+    private String label3;
+    private String label4;
+    private String label5;
+    private String label6;
+    private String label7;
+    private String label8;
+    private String label9;
+    private String label10;
+    private String dateCreated;
+    private String profileId;
+    private int albVersion;
+    private String albUser;
+
+    public int getRowNum() {
+        return rowNum;
+    }
+
+    public void setRowNum(int rowNum) {
+        this.rowNum = rowNum;
+    }
+
+    private int rowNum;
+
+    public String getProfileId() {
+        return profileId;
+    }
+
+    public void setProfileId(String profileId) {
+        this.profileId = profileId;
+    }
+
+    public int getAlbVersion() {
+        return albVersion;
+    }
+
+    public void setAlbVersion(int albVersion) {
+        this.albVersion = albVersion;
+    }
+
+    public String getAlbUser() {
+        return albUser;
+    }
+
+    public void setAlbUser(String albUser) {
+        this.albUser = albUser;
+    }
+
+    public String getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
+    }
+
+    public String getVariables() {
+        System.out.println("VARIABLES IS0 : "+variables);
+        System.out.println("test trimtonull: "+StringUtils.trimToNull(variables));
+//        if(variables != null && variables.equals("null"))return "";    //hardcode fix for the null problem
+        return variables.trim();
+    }
+
+    public void setVariables(String variables) {
+        System.out.println("XXXXXXXXVARIABLES IS : "+variables);
+        System.out.println("test trimtonull2: "+StringUtils.trimToNull(variables));
+//        this.variables = variables == null ? null : variables;
+        this.variables = variables;
+    }
+
+    public String getShowAlarm() {
+        return showAlarm;
+    }
+
+    public void setShowAlarm(String showAlarm) {
+        this.showAlarm = showAlarm;
+    }
+
+    public String getDatabaseTable() {
+        return databaseTable;
+    }
+
+    public void setDatabaseTable(String databaseTable) {
+        this.databaseTable = databaseTable;
+    }
+
+    public String getDatabaseAccess() {
+        return databaseAccess;
+    }
+
+    public void setDatabaseAccess(String databaseAccess) {
+        this.databaseAccess = databaseAccess;
+    }
+
+    public String getTableColumns() {
+        return tableColumns;
+    }
+
+    public void setTableColumns(String tableColumns) {
+        this.tableColumns = tableColumns;
+    }
+
+    public String getAdditionalText() {
+        return additionalText;
+    }
+
+    public void setAdditionalText(String additionalText) {
+        this.additionalText = additionalText;
+    }
+
+    public String getProbableCause() {
+        return probableCause;
+    }
+
+    public void setProbableCause(String probableCause) {
+        this.probableCause = probableCause;
+    }
+
+    public String getPerceivedSeverity() {
+        return perceivedSeverity;
+    }
+
+    public void setPerceivedSeverity(String perceivedSeverity) {
+        this.perceivedSeverity = perceivedSeverity;
+    }
+
+    public String getAlarmType() {
+        return alarmType;
+    }
+
+    public void setAlarmType(String alarmType) {
+        this.alarmType = alarmType;
+    }
+
+    public String getUserText() {
+        return userText;
+    }
+
+    public void setUserText(String userText) {
+        this.userText = userText;
+    }
+
+    public String getLabel1() {
+        return label1;
+    }
+
+    public void setLabel1(String label1) {
+        this.label1 = label1;
+    }
+
+    public String getLabel2() {
+        return label2;
+    }
+
+    public void setLabel2(String label2) {
+        this.label2 = label2;
+    }
+
+    public String getLabel3() {
+        return label3;
+    }
+
+    public void setLabel3(String label3) {
+        this.label3 = label3;
+    }
+
+    public String getLabel4() {
+        return label4;
+    }
+
+    public void setLabel4(String label4) {
+        this.label4 = label4;
+    }
+
+    public String getLabel5() {
+        return label5;
+    }
+
+    public void setLabel5(String label5) {
+        this.label5 = label5;
+    }
+
+    public String getLabel6() {
+        return label6;
+    }
+
+    public void setLabel6(String label6) {
+        this.label6 = label6;
+    }
+
+    public String getLabel7() {
+        return label7;
+    }
+
+    public void setLabel7(String label7) {
+        this.label7 = label7;
+    }
+
+    public String getLabel8() {
+        return label8;
+    }
+
+    public void setLabel8(String label8) {
+        this.label8 = label8;
+    }
+
+    public String getLabel9() {
+        return label9;
+    }
+
+    public void setLabel9(String label9) {
+        this.label9 = label9;
+    }
+
+    public String getLabel10() {
+        return label10;
+    }
+
+    public void setLabel10(String label10) {
+        this.label10 = label10;
+    }
+
+    public String getDateCreated() {
+        return dateCreated;
+    }
+
+    public void setDateCreated(String dateCreated) {
+        this.dateCreated = dateCreated;
+    }
+
+    @Override
+    public String toString() {
+        return "AlarmIdentifierObject -- Profile ID: "+
+                this.getProfileId()+"\n"+
+                "";
+
+    }
+}

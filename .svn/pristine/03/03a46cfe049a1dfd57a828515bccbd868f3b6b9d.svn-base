@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hp.temip.alb_gui.dao.AlbReference">
+
+    <!-- Profile Grid object -->
+    <resultMap type="com.hp.temip.alb_gui.domain.AlbReferenceObject" id="albReferenceObj">
+        <result column="REF_CAT" property="refCat" jdbcType="INTEGER"/>
+        <result column="REF_NAME" property="refName" jdbcType="VARCHAR"/>
+        <result column="REF_VALUE" property="refValue" jdbcType="VARCHAR"/>
+        <result column="REF_DESC" property="refDesc" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <select id="getReferenceList" resultMap="albReferenceObj" parameterType="Integer">
+      SELECT a.REF_CAT, a.REF_NAME, a.REF_VALUE, a.REF_DESC from ALB_REFERENCE a where a.REF_CAT = #{refCat}
+    </select>
+
+</mapper>

@@ -1,0 +1,45 @@
+package com.hp.temip.alb_gui.service;
+
+import com.hp.temip.alb_gui.dao.UserAccessAuditMapper;
+import com.hp.temip.alb_gui.domain.UserAccessAudit;
+import com.hp.temip.alb_gui.domain.UserAccessAuditChart;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 10/1/12
+ * Time: 11:45 AM
+ * To change this template use File | Settings | File Templates.
+ */
+@Service("UserAccessAuditService")
+@Transactional(readOnly = true)
+public class UserAccessAuditService {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    @Autowired
+    private UserAccessAuditMapper userAccessAuditMapper;
+
+    public int insertAudit(UserAccessAudit userAccessAudit) {
+        return userAccessAuditMapper.insertAudit(userAccessAudit);
+    }
+
+    public int updateAudit(UserAccessAudit userAccessAudit) {
+        return userAccessAuditMapper.updateAudit(userAccessAudit);
+    }
+
+    public List<UserAccessAudit> getUserAccessList() {
+        return (List<UserAccessAudit>)userAccessAuditMapper.getUserAccessList();
+    }
+    
+    public List<UserAccessAuditChart> getUserAccessChartData(){
+        return (List<UserAccessAuditChart>)userAccessAuditMapper.getUserAccessChartData();
+    }
+}

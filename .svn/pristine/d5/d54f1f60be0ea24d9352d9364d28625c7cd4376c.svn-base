@@ -1,0 +1,526 @@
+       var node_objects, link_objects, border_node_objects, changedLinkArry = [];
+       Ext.require([ 'Ext.util.*',
+           'Ext.util.JSON.*']);
+       
+      var getNodesStatus =  function getNodesStatus() {
+    	   changedLinkArry = [], i = 0, isStarted = false;
+           if (!isStarted){
+           	node_objects = cw.surface.getGroup('node_object');
+           	//border_node_objects = cw.surface.getGroup('border_node_object');
+            link_objects = cw.surface.getGroup('link_object');
+
+           	isStarted = true; // to make sure the request is completed before initiated another task by the task manager 
+               Ext.Ajax.request({
+
+                   url:'GetNodesStatus.htm',
+
+                   method:'POST',
+
+                   headers:{
+                       'Content-Type':'application/json'
+                   },
+
+                   params:arr,
+
+                   success:function (response) {
+                       var jsonRespObj = JSON.parse(response.responseText);
+                       var index;
+                       isChanged = [];
+                       i = 0;
+                       var pnter = 0;
+                       changedLinkArry = [];
+
+                       var deviceArray;
+                       var deviceArrayList = new Array();
+                       var cabArray;
+                       var cabArrayList = new Array();
+
+                       cw.surface.getGroup("cpu_node_object").each(function (item, id, len) {
+                           cw.surface.remove(item, true);
+                           //console.log(item.id);
+                       });
+
+                       cw.surface.getGroup("utilz_node_object").each(function (item, id, len) {
+                           cw.surface.remove(item, true);
+                           //console.log(item.id);
+                       });
+
+                       for (index in jsonRespObj) {
+                           var equipName = jsonRespObj[index].equipName;
+                           var deviceStatus = jsonRespObj[index].managedElementInv.deviceStatus;
+                           var cpuStatus = jsonRespObj[index].managedElementInv.cpuStatus;
+                           var kpiCpu = jsonRespObj[index].managedElementInv.kpiCpu;
+                           var kpiThresholdMidCpu = jsonRespObj[index].managedElementInv.kpiThresholdMidCpu;
+                           var kpiThresholdMaxCpu = jsonRespObj[index].managedElementInv.kpiThresholdMaxCpu;
+
+                           var utilzStatus = jsonRespObj[index].managedElementInv.utilzStatus;
+                           var kpiUtilz = jsonRespObj[index].managedElementInv.kpiUtilz;
+                           var kpiThresholdMidUtilz = jsonRespObj[index].managedElementInv.kpiThresholdMidUtilz;
+                           var kpiThresholdMaxUtilz = jsonRespObj[index].managedElementInv.kpiThresholdMaxUtilz;
+
+                           deviceArray = new Array();
+                           deviceArray.push(equipName);
+                           deviceArray.push(deviceStatus);
+                           deviceArray.push(cpuStatus);
+                           deviceArray.push(kpiCpu);
+                           deviceArray.push(kpiThresholdMidCpu);
+                           deviceArray.push(kpiThresholdMaxCpu);
+
+                           deviceArray.push(utilzStatus);
+                           deviceArray.push(kpiUtilz);
+                           deviceArray.push(kpiThresholdMidUtilz);
+                           deviceArray.push(kpiThresholdMaxUtilz);
+
+                           var test = Ext.Array.every(deviceArrayList, function(item, index, allItems ){
+                               return item[0] != equipName;
+                           });
+
+                           if(test) {
+                               deviceArrayList.push(deviceArray);
+                           }
+
+                           var cardSlot = jsonRespObj[index].cardSlot;
+                           var port = jsonRespObj[index].port;
+                           var cardStatus = jsonRespObj[index].cardStatus;
+                           var portStatus = jsonRespObj[index].portStatus;
+
+                           cabArray = new Array();
+
+                           cabArray.push(equipName);
+                           cabArray.push(cardSlot);
+                           cabArray.push(port);
+                           cabArray.push(cardStatus);
+                           cabArray.push(portStatus);
+                           cabArray.push(deviceStatus);
+
+                           cabArrayList.push(cabArray);
+
+                       }
+
+                       for (var i in deviceArrayList) {
+                           if (is2leg) {
+                               updateDeviceCode(node_objects, deviceArrayList[i][0] + '_2', deviceArrayList[i][1]);
+                               updateCpuKpi(deviceArrayList[i][0] + '_2', deviceArrayList[i][2],
+                                   deviceArrayList[i][3], deviceArrayList[i][4], deviceArrayList[i][5]);
+                               updateLinkKpi(deviceArrayList[i][0] + '_2', deviceArrayList[i][6], deviceArrayList[i][7], deviceArrayList[i][8], deviceArrayList[i][9])
+
+                               updateDeviceCode(node_objects, deviceArrayList[i][0], deviceArrayList[i][1]);
+                               updateCpuKpi(deviceArrayList[i][0], deviceArrayList[i][2], deviceArrayList[i][3], deviceArrayList[i][4], deviceArrayList[i][5]);
+                               updateLinkKpi(deviceArrayList[i][0], deviceArrayList[i][6], deviceArrayList[i][7], deviceArrayList[i][8], deviceArrayList[i][9])
+                           } else {
+                               updateDeviceCode(node_objects, deviceArrayList[i][0], deviceArrayList[i][1]);
+                               updateCpuKpi(deviceArrayList[i][0], deviceArrayList[i][2], deviceArrayList[i][3], deviceArrayList[i][4], deviceArrayList[i][5]);
+                               updateLinkKpi(deviceArrayList[i][0], deviceArrayList[i][6], deviceArrayList[i][7], deviceArrayList[i][8], deviceArrayList[i][9])
+                           }
+                       }
+
+                       for (var i in cabArrayList){
+                           var node = cabArrayList[i][0]
+                               + ":" + (((cabArrayList[i][1] == null) || (cabArrayList[i][1] == "")) ? 'NA' : cabArrayList[i][1])
+                               + ":" + (((cabArrayList[i][2] == null) || (cabArrayList[i][2] == ""))? 'NA' : cabArrayList[i][2]);
+                           updateDeviceStatus(cabArrayList[i][0], cabArrayList[i][5]);
+                           var id = getLinkId(node);
+                           isReq(id, cabArrayList[i][3]); // to update based on Card status
+                           isReq(id, cabArrayList[i][4]); // to update based on Port status
+
+                           if (is2leg){
+                               var node = cabArrayList[i][0] + "_2"
+                                   + ":" + (((cabArrayList[i][1] == null) || (cabArrayList[i][1] == "")) ? 'NA' : cabArrayList[i][1])
+                                   + ":" + (((cabArrayList[i][2] == null) || (cabArrayList[i][2] == ""))? 'NA' : cabArrayList[i][2]);
+                               updateDeviceStatus(cabArrayList[i][0]+"_2", cabArrayList[i][5]);
+                               var id = getLinkId(node);
+                               isReq(id, cabArrayList[i][3]); // to update based on Card status
+                               isReq(id, cabArrayList[i][4]); // to update based on Port status
+                           }
+                       }
+
+                       for (index in changedLinkArry) {
+                           for (idx in linkArray) {
+                               if (changedLinkArry[index][0] == linkArray[idx][0]) {
+                                   linkArray[idx][5] = changedLinkArry[index][1];
+                               }
+                           }
+                       }
+                       
+                       if (is2leg){
+                           findAltPath(path, borderPath,false);
+                           findAltPath(vobbPath, vobbBorderPath,true);
+                        }else{
+                    	   findAltPath(path, borderPath,false);
+                       }
+                       	
+                       isStarted = false;
+
+                   },
+
+                   failure:function (response) {
+                       //alert('FAIL');
+                       isStarted = false;
+                   }
+
+               });
+           }            
+       }
+
+          var isReq = function isReq(id, newStatus){
+                 var flag = true; 
+                 var isFound = false;
+                 
+                 if (undefined != id){
+               	  //alert(id);
+               	  for (var i in changedLinkArry){
+                         if (changedLinkArry[i][0] == id){
+                               isFound = true;
+                               if (changedLinkArry[i][1] < newStatus){
+                                      changedLinkArry[i][1] = newStatus;
+                                       var link = link_objects.findBy(
+                      					    function(items, key){
+                      					    	if(key === id){
+                      					    		//console.log(key,equipName);
+                      					              return true;  
+                      					        }
+                      					        return false;  
+                      					    }
+                      					);
+                                      
+                                      if ((null != link) && (undefined != link)){
+                                             if (newStatus == '2'){// Normal
+                                            	link.setAttributes({stroke:'red'},true); 
+                                             }else if (newStatus == '1') {// major
+                                            	link.setAttributes({stroke:'orange'},true);  
+                                             }else if (newStatus == '0'){
+                                            	 link.setAttributes({stroke:'green'},true);  
+                                             }
+                                      }                                 
+                                             
+                               }
+                         
+                         }
+                         
+                         if (isFound)
+                               break;
+                  }
+                  
+                  if (!isFound){
+                         if (undefined == i){
+                               i = 0;
+                         }else{
+                               i++;
+                         }
+                                                                         
+                         changedLinkArry[i] = new Array(2);
+                         changedLinkArry[i][0] = id;
+                         changedLinkArry[i][1] = newStatus == null ? '0' : newStatus;
+                        // updateLinkStatus(id, changedLinkArry[i][1]);
+                         var link = link_objects.findBy(
+            					    function(items, key){
+            					    	if(key === id){
+            					    		//console.log(key,equipName);
+            					              return true;  
+            					        }
+            					        return false;  
+            					    }
+            					);
+                         if ((undefined != link) && (null != link)){
+                               if (newStatus == '2') // Normal
+                            	   link.setAttributes({stroke:'red'},true); 
+                               else if (newStatus == '1'){ // major
+                            	   link.setAttributes({stroke:'orange'},true);
+                               }else if (newStatus == '0'){
+                            	   link.setAttributes({stroke:'green'},true);
+                               }
+                         }
+                         
+                  }
+                 }
+                 
+          };
+          
+          // to return the link Id
+          var getLinkId = function getLinkId(node) {
+                 for (idx in linkArray) {
+                        if ( (linkArray[idx][1] == node) || (linkArray[idx][2] == node))
+                              return linkArray[idx][0];
+                 }
+          };
+          
+          // to update DEVICE status
+          var updateDeviceStatus = function updateDeviceStatus(node,deviceStatus) {
+                 for (k in linkArray) {
+                        var par_node = linkArray[k][1].split(':');
+                        var ch_node = linkArray[k][2].split(':');
+                        if (par_node[0] == node)
+                              linkArray[k][3] = deviceStatus;
+                        else{
+                              if (ch_node[0] == node)
+                                     linkArray[k][4] = deviceStatus;
+                        }      
+                 }
+          };
+
+          var updateDeviceCode = function updateDeviceCode(nodes, equipName, deviceStatus) {
+        	  var isFound = false;
+        	  var node_object = nodes.findBy(
+ 					    function(items, key){
+ 					    	if(key === equipName){
+ 					    		//console.log(key,equipName);
+ 					              return true;
+ 					        }
+ 					        return false;
+ 					    }
+ 					);
+
+                 if ((undefined != node_object) && (null != node_object)){
+                	 isFound = true;
+                 	if (deviceStatus == '2') {// critical
+
+                         node_object.animate({
+                             duration:1000,
+                             from:{
+                                 fill:"#BDBDBD",
+                                 stroke:'#BDBDBD'
+                             },
+                             to:{
+                                 fill:"#f00",
+                                 stroke:'#B40404'
+                             },
+                             iterations:2
+                         });
+                     } else if (deviceStatus == '1') { // major
+                         node_object.animate({
+                             duration:1000,
+                             from:{
+                                 fill:"#BDBDBD",
+                                 stroke:'#BDBDBD'
+                             },
+                             to:{
+                                 fill:"#FF7F00",
+                                 stroke:'#B45F04'
+                             },
+                             iterations:2
+                         });
+                     } else if (deviceStatus == '0') { // normal
+                     	node_object.setAttributes({stroke:'#088A29',fill:'#58FA58'},true);
+                     }
+                 }
+                 return isFound;
+          };
+
+       function updateCpuKpi(equipName, cpuStatus, cpuValue, kpiThresholdMidCpu, kpiThresholdMaxCpu) {
+           Ext.Array.forEach(cpuKpiArr, function (item, index, allItem) {
+
+               if (item.id == (equipName + "_cpu")) {
+
+                   var temp = {
+                       id:item.id,
+                       type:'rect',
+                       width:17,//12
+                       height:17,//10
+                       x:item.x-1,//x
+                       y:(item.y-19),//y
+                       radius:2,
+                       stroke:'',
+                       'stroke-width':2,
+                       "group":'cpu_node_object'
+                   };
+
+                   var temp2 = {
+                       id:item.id + '_img',
+                       type: "image",
+                       src: "images/cpu.png",
+                       width: 16,
+                       height: 16,
+                       x:item.x,
+                       y:(item.y-18),
+                       "group":'cpu_node_object'
+                   };
+
+                   switch (cpuStatus) {
+                       case '2':
+                           //temp.fill = '#f00';
+                           //temp.stroke = '#610B0B';
+                           temp.stroke = '#f00';
+
+                           var sprite = Ext.create('Ext.draw.Sprite', temp);
+                           cw.surface.add(sprite).show(true);
+                           cw.surface.add(Ext.create('Ext.draw.Sprite', temp2)).show(true);
+
+
+                           sprite.animate({
+                               duration:1000,
+                               from:{
+                                   //fill:"#BDBDBD",
+                                   stroke:'#BDBDBD'
+                               },
+                               to:{
+                                   //fill:"#f00",
+                                   //stroke:'#B40404'
+                                   stroke:'#f00'
+                               },
+                               iterations:2
+                           });
+
+                           var tip = Ext.create('Ext.tip.ToolTip', {
+                               autoHide:true,
+                               target:item.id + '_img',
+                               trackMouse:true,
+                               html:'CRITICAL THRESHOLD REACHED! </br>CURRENT CPU: ' + cpuValue +
+                                   '</br>KPI MAJOR THRESHOLD: ' + kpiThresholdMidCpu +
+                                   '</br>KPI CRITICAL THRESHOLD: ' + kpiThresholdMaxCpu + '</br>'
+                           });
+
+                           break;
+                       case '1':
+                           //temp.fill = '#FF8000';
+                           //temp.stroke = '#B40404';
+                           temp.stroke = '#FF7F00';
+
+                           var sprite = Ext.create('Ext.draw.Sprite', temp);
+                           cw.surface.add(sprite).show(true);
+                           cw.surface.add(Ext.create('Ext.draw.Sprite', temp2)).show(true);
+
+                           sprite.animate({
+                               duration:1000,
+                               from:{
+                                   //fill:"#BDBDBD",
+                                   stroke:'#BDBDBD'
+                               },
+                               to:{
+                                   //fill:"#FF7F00",
+                                   //stroke:'#B45F04'
+                                   stroke:'#FF7F00'
+                               },
+                               iterations:2
+                           });
+
+                           var tip = Ext.create('Ext.tip.ToolTip', {
+                               autoHide:true,
+                               target:item.id+'_img',
+                               trackMouse:true,
+                               html:'CRITICAL THRESHOLD REACHED! </br>CURRENT CPU: ' + cpuValue +
+                                   '</br>KPI MAJOR THRESHOLD: ' + kpiThresholdMidCpu +
+                                   '</br>KPI CRITICAL THRESHOLD: ' + kpiThresholdMaxCpu + '</br>'
+                           });
+                           break;
+                       default:
+                           break;
+                   }
+               }
+           });
+       }
+
+       function updateLinkKpi(equipName, utilzStatus, utilzValue, kpiThresholdMidUtilz, kpiThresholdMaxUtilz) {
+           Ext.Array.forEach(utilzKpiArr, function (item, index, allItem) {
+
+               if (item.id == (equipName + "_utilz")) {
+
+                   var temp = {
+                       id:item.id,
+                       type:'rect',
+                       width:17,//12
+                       height:17,//10
+                       x:item.x+19,//x
+                       y:(item.y-19),//y
+                       radius:2,
+                       stroke:'',
+                       'stroke-width':2,
+                       "group":'utilz_node_object'
+                   };
+
+                   var temp2 = {
+                       id:item.id + '_img',
+                       type: "image",
+                       src: "images/link.png",
+                       width: 16,
+                       height: 16,
+                       x:item.x+18,
+                       y:(item.y-18),
+                       "group":'utilz_node_object'
+                   };
+
+                   switch (utilzStatus) {
+                       case '2':
+                           //temp.fill = '#f00';
+                           //temp.stroke = '#610B0B';
+                           temp.stroke = '#f00';
+
+                           var sprite = Ext.create('Ext.draw.Sprite', temp);
+                           cw.surface.add(sprite).show(true);
+                           cw.surface.add(Ext.create('Ext.draw.Sprite', temp2)).show(true);
+
+
+                           sprite.animate({
+                               duration:1000,
+                               from:{
+                                   //fill:"#BDBDBD",
+                                   stroke:'#BDBDBD'
+                               },
+                               to:{
+                                   //fill:"#f00",
+                                   //stroke:'#B40404'
+                                   stroke:'#f00'
+                               },
+                               iterations:2
+                           });
+
+                           var tip = Ext.create('Ext.tip.ToolTip', {
+                               autoHide:true,
+                               target:item.id + '_img',
+                               trackMouse:true,
+                               html:'CRITICAL THRESHOLD REACHED! </br>CURRENT LINK UTILZ: ' + utilzValue +
+                                   '</br>KPI MAJOR THRESHOLD: ' + kpiThresholdMidUtilz +
+                                   '</br>KPI CRITICAL THRESHOLD: ' + kpiThresholdMaxUtilz + '</br>'
+                           });
+
+                           break;
+                       case '1':
+                           //temp.fill = '#FF8000';
+                           //temp.stroke = '#B40404';
+                           temp.stroke = '#FF7F00';
+
+                           var sprite = Ext.create('Ext.draw.Sprite', temp);
+                           cw.surface.add(sprite).show(true);
+                           cw.surface.add(Ext.create('Ext.draw.Sprite', temp2)).show(true);
+
+                           sprite.animate({
+                               duration:1000,
+                               from:{
+                                   //fill:"#BDBDBD",
+                                   stroke:'#BDBDBD'
+                               },
+                               to:{
+                                   //fill:"#FF7F00",
+                                   //stroke:'#B45F04'
+                                   stroke:'#FF7F00'
+                               },
+                               iterations:2
+                           });
+
+                           var tip = Ext.create('Ext.tip.ToolTip', {
+                               autoHide:true,
+                               target:item.id+'_img',
+                               trackMouse:true,
+                               html:'CRITICAL THRESHOLD REACHED! </br>CURRENT LINK UTILZ: ' + utilzValue +
+                                   '</br>KPI MAJOR THRESHOLD: ' + kpiThresholdMidUtilz +
+                                   '</br>KPI CRITICAL THRESHOLD: ' + kpiThresholdMaxUtilz + '</br>'
+                           });
+                           break;
+                       default:
+                           break;
+                   }
+               }
+           });
+       }
+          
+          // to update DEVICE status
+          var updateLinkStatus = function updateLinkStatus(id,status) {
+                 for (idx in linkArray) {
+                        if (linkArray[idx][0] == id){
+                              linkArray[idx][5] = status == null ? '0' : status;
+                              break;
+                        }      
+                 }
+          };
+      
+
+

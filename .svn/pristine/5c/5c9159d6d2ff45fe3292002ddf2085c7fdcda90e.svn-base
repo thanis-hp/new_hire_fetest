@@ -1,0 +1,5 @@
+script.inputdir=C:\\testelito
+script.outputdir=C:\\testelito
+script.install.filename=file.bat
+script.preview.filename=file.bat
+

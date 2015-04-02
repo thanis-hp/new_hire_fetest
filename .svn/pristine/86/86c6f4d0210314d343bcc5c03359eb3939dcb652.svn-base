@@ -1,0 +1,120 @@
+package com.hp.temip.alb_gui.CustomFilter;
+
+import com.hp.temip.alb_gui.domain.UserAccessAudit;
+import com.hp.temip.alb_gui.service.UserAccessAuditService;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.event.InteractiveAuthenticationSuccessEvent;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.web.RedirectStrategy;
+import org.springframework.security.web.authentication.*;
+import org.springframework.web.context.request.RequestContextHolder;
+
+import javax.servlet.FilterChain;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
+import java.io.IOException;
+import java.io.Writer;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 9/12/12
+ * Time: 11:42 AM
+ * To change this template use File | Settings | File Templates.
+ */
+public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    private RememberMeServices rememberMeServices = new NullRememberMeServices();
+
+    private UserAccessAuditService service;
+
+    @Autowired
+    public void setService(UserAccessAuditService service) {
+        this.service = service;
+    }
+
+
+    @Override
+    protected void successfulAuthentication(HttpServletRequest request,
+                                            HttpServletResponse response, FilterChain chain,
+                                            Authentication authResult) throws java.io.IOException, javax.servlet.ServletException {
+
+        SavedRequestAwareAuthenticationSuccessHandler srh = new SavedRequestAwareAuthenticationSuccessHandler();
+
+        this.setAuthenticationSuccessHandler(srh);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Authentication success. Updating SecurityContextHolder to contain: " + authResult);
+        }
+
+        SecurityContextHolder.getContext().setAuthentication(authResult);
+
+        rememberMeServices.loginSuccess(request, response, authResult);
+
+        // Fire event
+        if (this.eventPublisher != null) {
+            eventPublisher.publishEvent(new InteractiveAuthenticationSuccessEvent(authResult, this.getClass()));
+        }
+
+        srh.setRedirectStrategy(new RedirectStrategy() {
+            //@Override
+            public void sendRedirect(HttpServletRequest httpServletRequest,
+                                     HttpServletResponse httpServletResponse, String s) throws IOException {
+                //do nothing, no redirect
+            }
+        }
+
+        );
+        super.successfulAuthentication(request, response, chain, authResult);
+
+        HttpServletResponseWrapper responseWrapper = new HttpServletResponseWrapper(response);
+        Writer out = responseWrapper.getWriter();
+
+        insertAudit();
+
+        System.out.println("***In Filter***");
+        out.write("{success:true}");
+        //out.close();
+    }
+
+    private void insertAudit() {
+        try {
+            User test = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            String sessionId = ((WebAuthenticationDetails) SecurityContextHolder.getContext().getAuthentication().getDetails()).getSessionId();
+
+            if(sessionId == null) sessionId = RequestContextHolder.currentRequestAttributes().getSessionId();
+
+            UserAccessAudit userAccessAudit = new UserAccessAudit();
+
+            userAccessAudit.setUserId(test.getUsername());
+            userAccessAudit.setSessionId(sessionId);
+
+            service.insertAudit(userAccessAudit);
+
+            logger.info("Audit Message was successfully inserted: " + userAccessAudit.toString());
+        } catch (Exception e) {
+            logger.error("Fail to insert Audit Log.");
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void unsuccessfulAuthentication(
+            HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws java.io.IOException, javax.servlet.ServletException {
+        super.unsuccessfulAuthentication(request, response, failed);
+        HttpServletResponseWrapper responseWrapper = new HttpServletResponseWrapper(response);
+        Writer out = responseWrapper.getWriter();
+
+        System.out.println("***In Denied Filter***");
+        out.write("{success:false}");
+        //out.close();
+    }
+}

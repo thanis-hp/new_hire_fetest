@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hp.temip.alb_gui.dao.AlbHostMapper">
+    <resultMap type="com.hp.temip.alb_gui.domain.AlbHostGridObject" id="albHostGrid">
+        <result column="HOST_ID" property="hostId" jdbcType="INTEGER"/>
+        <result column="HOST_NAME" property="hostName" jdbcType="VARCHAR"/>
+        <result column="HOST_IP" property="hostIP" jdbcType="VARCHAR"/>
+        <result column="ENABLED" property="enabled" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <select id="getHostList" resultMap="albHostGrid">
+      SELECT * FROM ALB_HOST
+    </select>
+
+    <update id="updateHosts" parameterType="com.hp.temip.alb_gui.domain.AlbHostGridObject">
+        UPDATE ALB_HOST a set a.HOST_NAME = #{hostName}, a.HOST_IP = #{hostIP}, a.ENABLED = #{enabled} WHERE a.HOST_ID = #{hostId}
+    </update>
+
+    <insert id="insertNewHost" parameterType="com.hp.temip.alb_gui.domain.AlbHostGridObject">
+        INSERT INTO ALB_HOST (HOST_ID, HOST_NAME, HOST_IP, ENABLED) VALUES (alb_host_seq.nextval, #{hostName}, #{hostIP}, 1)
+    </insert>
+
+    <select id="getHost" resultMap="albHostGrid" parameterType="Integer">
+      SELECT * FROM ALB_HOST a where a.HOST_ID = #{hostId}
+    </select>
+</mapper>

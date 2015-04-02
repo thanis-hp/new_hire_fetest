@@ -1,0 +1,24 @@
+package com.hp.temip.alb_gui.dao;
+
+import com.hp.temip.alb_gui.domain.AlbHostGridObject;
+
+import java.util.List;
+
+/**
+ * Copyright Hewlett Packard Sales (M) Sdn Bhd
+ * User: Thaniswaran Raja Goval
+ * Email: thaniswaran.raja-goval@hp.com
+ * Date: 10/14/13
+ * Time: 11:58 AM
+ * Project: $(PROJECT_NAME)
+ * Package: com.hp.temip.alb_gui.dao
+ */
+public interface AlbHostMapper {
+    public List<AlbHostGridObject> getHostList();
+
+    public int updateHosts(AlbHostGridObject albHostGridObject);
+
+    public int insertNewHost(AlbHostGridObject albHostGridObject);
+
+    public AlbHostGridObject getHost(int hostId);
+}

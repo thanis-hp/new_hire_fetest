@@ -1,0 +1,300 @@
+function getAlarmGrid() {
+
+    var alarmStore = new Ext.data.JsonStore({
+        storeId: 'alarm',
+        autoLoad: false,
+        proxy: {
+            type: 'ajax',
+            url: 'getAlarmList.htm',
+            reader: {
+                type: 'json',
+                root: 'alarms'
+            }
+        },
+
+        fields: ['alarmName', 'alarmText', 'alarmRemark']
+    });
+
+    var addAlarmForm = {
+        xtype: 'form',
+        id: 'addAlarmForm',
+        layout: 'form',
+        frame: true,
+        width: 600,
+        bodyPadding: 10,
+        defaults: {
+            anchor: '100%',
+            labelWidth: 100
+        },
+        url: 'insertNewAlarm.htm',
+        items: [
+            {
+                xtype: 'textfield',
+                id: 'alarmName',
+                name: 'alarmName',
+                value: '',
+                fieldLabel: 'Alarm Name',
+                allowBlank: false
+            },
+            {
+                xtype: 'textfield',
+                id: 'remark',
+                name: 'alarmRemark',
+                value: '',
+                fieldLabel: 'Remark',
+                allowBlank: false
+            },
+            {
+                xtype: 'textarea',
+                id: 'alarmText',
+                name: 'alarmText',
+                value: '',
+                height: 450,
+                fieldLabel: 'Alarm Text',
+                allowBlank: false,
+                fieldStyle: {
+                    'fontFamily'   : 'courier new'
+                }
+            }
+        ],
+        buttons: [
+            {
+                text: 'Cancel',
+                handler: function () {
+                    this.up('window').hide();
+                }
+            },
+            {
+                text: 'Save',
+                formBind: true,
+                handler: function () {
+                    var form = this.up('form').getForm();
+                    if (form.isValid()) {
+                        this.up('window').hide();
+                        Ext.getBody().mask('Adding Sample Alarm...');
+                        form.submit({
+                            success: function (form, action) {
+                                Ext.Msg.alert('Success', 'Sample alarm added successfully');
+                                alarmStore.reload();
+                                form.reset();
+                                Ext.getBody().unmask();
+
+                            },
+                            failure: function (form, action) {
+                                Ext.getBody().unmask();
+                                Ext.Msg.alert('Failed', action.result.errors.reason);
+                                //Ext.Msg.alert('Failed', 'Fail to add. Please contact System Administrator');
+                            }
+                        });
+                    }
+                }
+            }
+        ]
+    };
+
+    var addAlarmModelWin = Ext.widget('window', {
+        title: 'Add Sample Alarm',
+        closeAction: 'hide',
+        width: 800,
+        height: 600,
+        layout: 'fit',
+        modal: true,
+        items: [addAlarmForm]
+    });
+
+    var updateAlarmForm = {
+        xtype: 'form',
+        id: 'updateAlarmForm',
+        layout: 'form',
+        frame: true,
+        width: 600,
+        bodyPadding: 10,
+        defaults: {
+            anchor: '100%',
+            labelWidth: 100
+        },
+        url: 'updateAlarm.htm',
+        items: [
+            {
+                xtype: 'textfield',
+                id: 'updateAlarmName',
+                name: 'alarmName',
+                value: '',
+                fieldLabel: 'Alarm Name',
+                allowBlank: false,
+                readOnly: true
+            },
+            {
+                xtype: 'textfield',
+                id: 'updateAlarmRemark',
+                name: 'alarmRemark',
+                value: '',
+                fieldLabel: 'Remark',
+                allowBlank: false
+            },
+            {
+                xtype: 'textarea',
+                id: 'updateAlarmText',
+                name: 'alarmText',
+                value: '',
+                fieldLabel: 'Alarm Text',
+                height: 450,
+                allowBlank: false,
+                fieldStyle: {
+                    'fontFamily'   : 'courier new'
+                },
+                resizable: true
+            }
+        ],
+        buttons: [
+            {
+                text: 'Cancel',
+                handler: function () {
+                    this.up('window').hide();
+                }
+            },
+            {
+                text: 'Save',
+                formBind: true,
+                handler: function () {
+                    var form = this.up('form').getForm();
+                    if (form.isValid()) {
+                        this.up('window').hide();
+                        Ext.getBody().mask('Updating Sample Alarm...');
+                        form.submit({
+                            failure: function (form, action) {
+                                Ext.getBody().unmask();
+                                if (typeof action != 'undefined'){
+                                    if (action.failureType == 'connect'){
+                                        Ext.Msg.alert('Failed', "Server not available. Please contact Administrator");
+                                    } else {
+                                        Ext.Msg.alert('Failed', action.result.errors.reason);
+                                    }
+                                }
+                            },
+                            success: function (form, action) {
+                                Ext.Msg.alert('Success', 'Sample alarm updated successfully');
+                                alarmStore.reload();
+                                form.reset();
+                                Ext.getBody().unmask();
+
+                            }
+                        });
+                    }
+                }
+            }
+        ]
+    };
+
+    var updateAlarmModelWin = Ext.widget('window', {
+        title: 'Update Sample Alarm',
+        closeAction: 'hide',
+        width: 800,
+        height: 600,
+        layout: 'fit',
+        modal: true,
+        items: [updateAlarmForm]
+    });
+
+    var alarmGrid = Ext.create('Ext.grid.Panel', {
+        id: 'sampleAlarmManagement-panel',
+        store: alarmStore,
+        columns: [
+            Ext.create('Ext.grid.RowNumberer'),
+            {text: "Alarm Name", width: 280, dataIndex: 'alarmName', sortable: true},
+            {text: "Alarm Text", dataIndex: 'alarmText', sortable: true, hidden: true},
+            {text: "Remark", flex: 1, sortable: true, dataIndex: 'alarmRemark'}
+        ],
+        columnLines: true,
+        collapsible: false,
+        title: 'Sample Alarm Management',
+        iconCls: 'icon-grid',
+        autoScroll: true,
+        tbar: [
+            {
+                xtype: 'button',
+                text: 'Refresh',
+                iconCls: 'icon-refresh',
+                handler: function () {
+                    alarmStore.reload();
+                }
+            },
+            {
+                xtype: 'button',
+                iconCls: 'icon-add',
+                text: 'Add',
+                handler: function () {
+                    addAlarmModelWin.show();
+                }
+            },{
+                xtype: 'button',
+                iconCls: 'icon-remove',
+                text: 'Remove',
+                handler: function () {
+                    if (alarmGrid.getSelectionModel().hasSelection()) {
+                        Ext.Msg.show({
+                            title: 'Confirm Action',
+                            msg: 'Are you sure you want to remove this Sample Alarm?',
+                            width: 300,
+                            buttons: Ext.Msg.YESNO,
+                            fn: function (btn) {
+
+                                if (btn == 'yes'){
+
+                                var row = alarmGrid.getSelectionModel().getSelection()[0];
+                                console.log(row.get('alarmName'));
+
+                                Ext.getBody().mask('Removing sample alarm...');
+                                Ext.Ajax.request(
+                                    {
+                                        url: 'removeSampleAlarm.htm',
+                                        method: 'POST',
+                                        params: {alarmName: row.get('alarmName')},
+                                        success: function (response) {
+                                            Ext.Msg.alert("Success", "Sample Alarm: " + row.get('alarmName') +
+                                                " removed successfully.");
+                                            alarmStore.reload();
+                                        },
+                                        failure: function (response) {
+                                            Ext.Msg.alert("Fail", "Failed to remove alarm sample. Please contact Administrator.");
+                                        },
+                                        callback: function () {
+                                            Ext.getBody().unmask();
+                                            alarmStore.reload();
+                                        }
+                                    }
+                                );
+                                } /*else {
+                                    Ext.Msg.alert("Message", "No Changes");
+                                }*/
+                            },
+                            animateTarget: this,
+                            icon: Ext.Msg.QUESTION
+                        });
+                    } else {
+                        Ext.Msg.alert("Message", "Please select a sample alarm to remove.");
+                    }
+                }
+            }
+        ],
+        listeners: {
+            activate: function (grid, eOpts) {
+                alarmStore.reload();
+            },
+            itemdblclick: function (view, rec) {
+
+                Ext.getCmp('updateAlarmName').setValue(rec.get('alarmName'));
+                Ext.getCmp('updateAlarmText').setValue(rec.get('alarmText'));
+                Ext.getCmp('updateAlarmRemark').setValue(rec.get('alarmRemark'));
+
+                updateAlarmModelWin.show();
+
+
+            }
+        }
+    });
+
+    return alarmGrid;
+}
+
+

@@ -1,0 +1,2711 @@
+//Ext.require(['*']);
+Ext.Loader.setConfig({enabled: true});
+Ext.Loader.setPath('Ext.ux', 'scripts/ext.js/4.1.1/ux');
+Ext.require([
+    'Ext.grid.*',
+    'Ext.data.*',
+    'Ext.ux.grid.FiltersFeature'
+]);
+
+function getProfileManagementMain() {
+//GRID STARTS HERE
+    Ext.QuickTips.init();
+
+// setup the state provider, all state information will be saved to a cookie
+    Ext.state.Manager.setProvider(Ext.create('Ext.state.CookieProvider'));
+
+    var profileGridStore = new Ext.data.JsonStore({
+        storeId: 'profileGrid-store',
+        autoLoad: true,
+        proxy: {
+            type: 'ajax',
+            url: 'getProfileList.htm',
+            reader: {
+                type: 'json',
+                root: 'profiles'
+            }
+        },
+
+        fields: ['profileId', 'dateCreated', 'dateModified', 'translateStatus', 'deployStatus', 'albVersion', 'albUser']
+    });
+
+    var filters = {
+        ftype: 'filters',
+        encode: false,
+        local: true
+    };
+
+    //combobox for sample alarms
+    var alarmComboStore = new Ext.data.JsonStore({
+        storeId: 'alarm-combobox',
+        autoLoad: false,
+        proxy: {
+            type: 'ajax',
+            url: 'getAlarmList.htm',
+            reader: {
+                type: 'json',
+                root: 'alarms'
+            }
+        },
+
+        fields: ['alarmName', 'alarmText', 'alarmRemark']
+    });
+
+
+    // create the Grid
+    var profileGrid = Ext.create('Ext.grid.Panel', {
+        id: 'profileManagement-panel',
+        iconCls:'icon-grid',
+        frame: true,
+        store: profileGridStore,
+        stateful: true,
+        stateId: 'profileGrid-state',
+        sealedColumns: true,
+        enableColumnMove: false,
+        enableColumnResize: false,
+        features: [filters],
+        columns: [ Ext.create('Ext.grid.RowNumberer'),
+            {
+                text: 'Profile Name',
+                //width    : 85,
+                flex: 1,
+                sortable: false,
+                dataIndex: 'profileId',
+                filter: {
+                    type: 'string'
+                }
+            },
+            {
+                text: 'ALB Version',
+                width: 85,
+                sortable: false,
+                dataIndex: 'albVersion',
+                filter: {
+                    type: 'numeric'
+                }
+            },
+            {
+                text: 'ALB User',
+                //width    : 85,
+                flex: 1,
+                sortable: false,
+                dataIndex: 'albUser',
+                filter: {
+                    type: 'string'
+                }
+            },
+            {
+                text: 'Date Created',
+                width: 85,
+                sortable: true,
+                renderer: Ext.util.Format.dateRenderer('m/d/Y'),
+                dataIndex: 'dateCreated'
+            },
+            {
+                text: 'Deploy File Status',
+                width: 120,
+                sortable: true,
+                dataIndex: 'translateStatus'
+            },
+            {
+                text: 'Script Install Status',
+                width: 120,
+                sortable: true,
+                dataIndex: 'deployStatus'
+            },
+            {
+                xtype: 'actioncolumn',
+                text: 'Actions',
+                width: 150,
+                sortable: false,
+                menuDisabled: true,
+                align: 'center',
+                items: [
+                    {
+                        icon: 'images/save.png',  // Use a URL in the icon config
+                        tooltip: 'Deploy Files',
+                        handler: function (grid, rowIndex, colIndex) {
+                            var rec = profileGridStore.getAt(rowIndex);
+
+                            Ext.MessageBox.show({
+                                title: 'Deploy ' + rec.get('profileId'),
+                                msg: 'Are you sure? This action will overwrite Profile: ' + rec.get('profileId') + ' files.',
+                                buttons: Ext.MessageBox.OKCANCEL,
+                                fn: function (btn) {
+                                    if (btn == 'ok') {
+                                        Ext.Ajax.request({
+                                            url: 'createFiles.htm',
+                                            method: 'POST',
+                                            params: {"profileId": rec.get('profileId'), "albVersion": rec.get('albVersion')},
+                                            success: function (response) {
+                                                var jsonData = Ext.JSON.decode(response.responseText);
+                                                profileGridStore.reload();
+
+                                                if (jsonData.success) {
+                                                    Ext.Msg.alert('Success', 'Successfully deployed files to TeMIP server.');
+                                                } else {
+                                                    var log = jsonData.errors.reason;
+                                                    Ext.Msg.alert('Failure', log);
+                                                }
+
+                                            },
+                                            failure: function (response) {
+                                                Ext.Msg.alert('Failed', 'Failure trying to deploy files');
+                                            }
+                                        });
+                                    }
+                                },
+                                animateTarget: 'profileManagement-panel',
+                                icon: Ext.MessageBox.QUESTION
+                            });
+                        }
+                    },
+                    {
+                        icon: 'images/application_go.png',  // Use a URL in the icon config
+                        tooltip: 'Execute Install script',
+                        handler: function (grid, rowIndex, colIndex) {
+                            var rec = profileGridStore.getAt(rowIndex);
+
+                            Ext.MessageBox.show({
+                                title: 'Execute Install script for ' + rec.get('profileId'),
+                                msg: 'Are you sure? This action will overwrite any existing profile detail in ALB TeMIP.',
+                                buttons: Ext.MessageBox.OKCANCEL,
+                                fn: function (btn) {
+                                    if (btn == 'ok') {
+                                        executeInstallScript(rec.get('profileId'), rec.get('albVersion'));
+
+                                    }
+                                },
+                                animateTarget: 'profileManagement-panel',
+                                icon: Ext.MessageBox.QUESTION
+                            });
+                        }
+                    },
+                    {
+                        icon: 'images/information.png',  // Use a URL in the icon config
+                        tooltip: 'Preview',
+                        handler: function (grid, rowIndex, colIndex) {
+                            var rec = profileGridStore.getAt(rowIndex);
+
+                            selectSampleAlarm(rec.get('profileId'), rec.get('albVersion'));
+
+                        }
+                    }
+                ]
+            }
+        ],
+        height: 500,
+        width: 700,
+        title: 'ALB Profile Management',
+        viewConfig: {
+            stripeRows: true
+        },
+        tbar: [
+            {
+                xtype: 'button',
+                text: 'Refresh',
+                iconCls: 'icon-refresh',
+                handler: function () {
+                    profileGridStore.reload();
+                }
+            },
+            {
+                xtype: 'button',
+                iconCls: 'icon-add',
+                text: 'Add Profile',
+                handler: function () {
+
+                    Ext.define("accessModuleModel", {
+                        extend: "Ext.data.Model",
+                        fields: [
+                            {name: 'name'}
+                        ]
+                    });
+
+                    var accessModuleStore = new Ext.data.XmlStore({
+                        // store configs
+                        model: 'accessModuleModel',
+                        storeId: 'access-module-store',
+                        proxy: {
+                            type: 'ajax',
+                            url: 'scripts/accessmodules.xml',
+                            reader: {
+                                type: 'xml',
+                                root: 'accessmodules',
+                                record: 'accessmodule'
+                            }
+                        },
+                        autoLoad: true
+                    });
+
+                    accessModuleStore.on({ 'load': function (store, records, successful)
+                    {
+                        console.log(store.getProxy().getReader().rawData);
+                        console.log('count is: '+store.getCount());
+                    }
+                    });
+
+                    var addProfileWindow = Ext.widget('window', {
+                        title: 'Add Profile',
+                        id: 'add-profile-window',
+                        closeAction: 'hide',
+                        width: 300,
+                        height: 150,
+                        layout: 'auto',
+                        bodyPadding: 10,
+                        modal: true,
+                        items: [
+                            {
+                                xtype: 'textfield',
+                                id: 'add-profile-id',
+                                fieldLabel: 'Profile Name',
+                                allowBlank: false
+                            }
+                            ,
+                            {
+                                xtype: 'combobox',
+                                id: 'add-access-module',
+                                fieldLabel: 'Access Module',
+                                allowBlank: false,
+                                store: accessModuleStore,
+                                displayField: 'name',
+                                valueField: 'name',
+                                editable: false
+                            }
+                        ],
+                        listeners: {
+                            hide: function () {
+                                addProfileWindow.destroy();
+
+                            }
+                        },
+                        buttons: [
+                            {
+                                text: 'Ok',
+                                disabled: false,
+                                handler: function () {
+
+                                    var profileIdField = Ext.getCmp('add-profile-id');
+                                    var accessModuleField = Ext.getCmp('add-access-module');
+
+                                    if(Ext.isEmpty(profileIdField.getValue())|| Ext.isEmpty(accessModuleField.getValue())){
+                                        Ext.Msg.alert('Error', '<span style="color:red;align: center">Please enter the required fields</span>');
+                                    }else{
+                                        selectedProfile = profileIdField.getValue();
+                                        selectedAccessModule = accessModuleField.getValue();
+                                        Ext.getCmp('content-panel').layout.setActiveItem('profileGrids-panel');
+                                        addProfileWindow.hide();
+                                    }
+
+                                }
+                            }
+                        ]
+                    });
+                    addProfileWindow.show();
+
+//
+//                    Ext.Msg.prompt('Profile Name', 'Please enter profile name:', function (btn, text, cfg) {
+//                        if (btn == 'ok' && Ext.isEmpty(text)) {
+//                            var newMsg = '<span style="color:red">Please enter profile name:</span>';
+//                            Ext.Msg.show(Ext.apply({}, { msg: newMsg }, cfg));
+//                        } else if (btn == 'ok') {
+//                            selectedProfile = text;
+//                            createNewProfile();
+//                        } else {
+//                            //do nothing
+//                        }
+//                    });
+                }
+            },
+            {
+                xtype: 'button',
+                iconCls: 'icon-remove',
+                text: 'Remove Profile',
+                handler: function () {
+                    if (profileGrid.getSelectionModel().hasSelection()) {
+                        Ext.Msg.show({
+                            title: 'Confirm Action',
+                            msg: 'Are you sure you want to remove the selected profile?',
+                            width: 300,
+                            buttons: Ext.Msg.YESNO,
+                            fn: function (btn) {
+                                if (btn == 'yes') {
+                                    var row = profileGrid.getSelectionModel().getSelection()[0];
+                                    Ext.getBody().mask('Removing profile from system...');
+                                    removeProfile(row.get('profileId'), row.get('albVersion'));
+                                }
+                            },
+                            animateTarget: this,
+                            icon: Ext.Msg.QUESTION
+                        });
+                    } else {
+                        Ext.Msg.alert("Message", "Please select a profile to remove.");
+                    }
+                }
+            }
+        ],
+        listeners: {
+            itemdblclick: function (view, rec, node, index, e) {
+                selectedProfile = rec.get('profileId');
+                selectedVersion = rec.get('albVersion');
+                //console.log(rec.get('profileId'));
+                Ext.getCmp('content-panel').layout.setActiveItem('profileGrids-panel');
+
+            },
+            activate: function (grid, eOpts) {
+                profileGridStore.reload();
+            }
+
+        }
+    });
+
+    function selectSampleAlarm(profileId, albVersion){
+        //load the combobox store
+        alarmComboStore.load();
+
+        var alarmComboWindow = Ext.widget('window', {
+            title: 'Select Sample Alarm',
+            id: 'sample-alarm-window',
+            closeAction: 'hide',
+            width: 200,
+            height: 120,
+            layout: 'vbox',
+            bodyPadding: 10,
+            modal: true,
+            items: [{
+                xtype:'combo',
+                id: 'sample-alarm-combobox',
+                displayField: 'alarmName',
+                valueField: 'alarmName',
+                store:alarmComboStore
+            }],
+            listeners: {
+                hide: function () {
+                    alarmComboStore.reload();
+                    alarmComboWindow.destroy();
+                }
+            },
+            buttons: [
+                {
+                    text: 'Select',
+                    disabled: false,
+                    handler: function(){
+                        executePreviewScript(profileId, Ext.getCmp('sample-alarm-combobox').getValue());
+                    }
+                }
+            ]
+        });
+        alarmComboWindow.show();
+
+    }
+
+
+
+    function executeInstallScript(profileId, albVersion) {
+        Ext.Ajax.request({
+            url: 'executeInstallScript.htm',
+            method: 'POST',
+            params: {"profileId": profileId, "albVersion": albVersion},
+            success: function (response) {
+                console.log('success');
+                var log;
+
+                var scriptResultWindow = Ext.widget('window', {
+                    title: 'Execute Install',
+                    id: 'execution-result-window',
+                    closeAction: 'hide',
+                    width: 400,
+                    height: 300,
+                    layout: 'fit',
+                    modal: true,
+                    items: [{
+                        xtype: 'textarea',
+                        id: 'txtLog',
+                        name: 'er-log',
+                        value: log,
+                        allowBlank: false,
+                        fieldStyle: {
+                            'fontFamily'   : 'courier new'
+                        }
+                    }],
+                    listeners: {
+                        hide: function (form, action) {
+                            profileGridStore.reload();
+                            scriptResultWindow.destroy();
+                        }
+                    },
+                    buttons: [
+                        {
+                            text: 'Install',
+                            id: 'install-button',
+                            disabled: false,
+                            handler: function(){
+                                Ext.Ajax.request({
+                                    url: 'continueInstall.htm',
+                                    method: 'POST',
+                                    params: {"mode": 'install', "profileId": profileId, "albVersion": albVersion},
+                                    success: function (response) {
+                                        console.log('success');
+                                        var newLog;
+                                        if (response.responseText == '-1') {
+                                            console.log('responseText missing');
+                                            newLog = 'Failed to execute Install script. Please contact Administrator';
+                                        } else {
+
+                                            console.log(response.responseText);
+                                            var jsonData = Ext.JSON.decode(response.responseText);
+                                            newLog = jsonData.data.result;
+                                            Ext.getCmp('txtLog').setValue(log+newLog);
+
+                                            if (jsonData.success) {
+                                                Ext.getCmp('install-close-button').setText('Close');
+                                            }
+                                        }
+
+
+
+                                    },
+                                    failure: function (response) {
+                                        console.log('failure');
+                                        Ext.Msg.alert('Failed', 'Failed to execute Install Script. Please contact Administrator');
+                                    }
+                                });
+                            }
+                        },
+                        {
+                            text: 'Update',
+                            id: 'update-button',
+                            disabled: false,
+                            handler: function(){
+                                Ext.Ajax.request({
+                                    url: 'continueInstall.htm',
+                                    method: 'POST',
+                                    params: {"mode": 'update', "profileId": profileId, "albVersion": albVersion},
+                                    success: function (response) {
+                                        console.log('success');
+                                        var newLog;
+                                        if (response.responseText == '-1') {
+                                            console.log('responseText missing');
+                                            newLog = 'Failed to execute Update script. Please contact Administrator';
+                                        } else {
+
+                                            console.log(response.responseText);
+                                            var jsonData = Ext.JSON.decode(response.responseText);
+                                            newLog = jsonData.data.result;
+                                            Ext.getCmp('txtLog').setValue(log+newLog);
+
+                                            if (jsonData.success) {
+                                                Ext.getCmp('install-close-button').setText('Close');
+                                            }
+                                        }
+
+
+
+                                    },
+                                    failure: function (response) {
+                                        console.log('failure');
+                                        Ext.Msg.alert('Failed', 'Failed to execute Update script. Please contact administrator');
+                                    }
+                                });
+                            }
+                        },
+                        {
+                            text: 'Cancel',
+                            id: 'install-close-button',
+                            disabled: false,
+                            handler: function(){
+                                scriptResultWindow.hide();
+                            }
+                        }
+                    ]
+                });
+
+                if (response.responseText == '-1') {
+                    console.log('responseText missing');
+                    log = 'Failed to execute Translate script. Please contact Administrator';
+                } else {
+                    console.log(response.responseText);
+                    var jsonData = Ext.JSON.decode(response.responseText);
+
+                    log = jsonData.data.result;
+                    Ext.getCmp('txtLog').setValue(log);
+
+                    if (!jsonData.success) {
+                        Ext.getCmp('install-button').disable();
+                        Ext.getCmp('update-button').disable();
+                    }
+
+                    if(!jsonData.install){
+                        Ext.getCmp('install-button').disable(); //disable install for non privileged users
+                    }
+                }
+
+                scriptResultWindow.show();
+
+            },
+            failure: function (response) {
+                console.log('failure');
+                Ext.Msg.alert('Failed', 'Failed to create new profile.');
+            }
+        });
+    }
+
+    function executePreviewScript(profileId, sampleAlarm) {
+        Ext.Ajax.request({
+            url: 'executePreviewScript.htm',
+            method: 'POST',
+            params: {"profileId": profileId, "sampleAlarm":sampleAlarm},
+            success: function (response) {
+                console.log('success');
+                var log;
+                if (response.responseText == '-1') {
+                    console.log('responseText missing');
+                    log = 'Failed to execute Preview script. Please contact Administrator';
+                } else {
+                    console.log(response.responseText);
+                    var jsonData = Ext.JSON.decode(response.responseText);
+                    log = jsonData.data.result;
+                }
+
+                var scriptResultWindow = Ext.widget('window', {
+                    title: 'Execution Result',
+                    id: 'execution-result-window',
+                    closeAction: 'hide',
+                    width: 650,
+                    height: 450,
+                    layout: 'fit',
+                    modal: true,
+                    items: [{
+                        xtype: 'textarea',
+                        id: 'txtLog',
+                        name: 'er-log',
+                        value: log,
+                        allowBlank: false,
+                        fieldStyle: {
+                            'fontFamily'   : 'courier new'
+                        }
+                    }],
+                    listeners: {
+                        hide: function (form, action) {
+                            profileGridStore.reload();
+                            scriptResultWindow.destroy();
+                        }
+                    }
+                });
+                scriptResultWindow.show();
+
+            },
+            failure: function (response) {
+                console.log('failure');
+                Ext.Msg.alert('Failed', 'Failed to launch preview. Contact administrator');
+            }
+        });
+    }
+
+    function createNewProfile() {
+        Ext.Ajax.request({
+            url: 'insertNewProfile.htm',
+            method: 'POST',
+            params: {"profileId": selectedProfile},
+            success: function (response) {
+                if (response.responseText == '-1') {
+                    Ext.Msg.alert('Failed', 'Failed');
+                } else {
+                    Ext.getCmp('content-panel').layout.setActiveItem('profileGrids-panel');
+                }
+
+            },
+            failure: function (response) {
+                Ext.Msg.alert('Failed', 'Failed to create new profile.');
+            }
+        });
+    }
+
+    function removeProfile(profileId, albVersion) {
+        Ext.Ajax.request({
+            url: 'removeProfile.htm',
+            method: 'POST',
+            params: {"profileId": profileId, "albVersion": albVersion},
+            success: function (response) {
+                if (response.responseText == '-1') {
+                    Ext.Msg.alert('Failed', 'Failed to remove profile. Please contact Administrator.');
+                } else {
+                    Ext.Msg.alert('Success', 'Profile removed from system.');
+                }
+                profileGridStore.reload();
+            },
+            failure: function (response) {
+                Ext.Msg.alert('Failed', 'Failed to remove profile. Please contact Administrator.');
+            },
+            callback: function () {
+                Ext.getBody().unmask();
+                profileGridStore.reload();
+            }
+        });
+    }
+
+    return profileGrid;
+}
+
+
+function getProfileGrids() {
+
+
+    //SELECTION CONTROL GRID
+    Ext.QuickTips.init();
+
+// setup the state provider, all state information will be saved to a cookie
+    Ext.state.Manager.setProvider(Ext.create('Ext.state.CookieProvider'));
+
+
+    Ext.define('SelectionControlModel', {
+        extend: 'Ext.data.Model',
+        fields: [
+            {name: 'accessModule'},
+            {name: 'globalClass'},
+            {name: 'domains'},
+            {name: 'nodeName'},
+            {name: 'subclass'},
+            {name: 'originalAlarmRemain'},
+            {name: 'profileId'},
+            {name: 'managedObjectDiscriminator'},
+            {name: 'dateCreated'}
+        ]
+    });
+
+    var selectionControlGridStore = new Ext.data.JsonStore({
+        storeId: 'profileGrids-selection-store',
+        autoLoad: false,
+        model: 'SelectionControlModel',
+        proxy: {
+            type: 'ajax',
+            url: 'getSelectionControl.htm',
+            reader: {
+                type: 'json',
+                root: 'selctrl'
+            },
+            params: {profileId: '', albVersion: ''}
+        },
+
+
+        fields: ['accessModule', 'globalClass', 'domains', 'nodeName', 'subclass', 'originalAlarmRemain', 'profileId',
+            'managedObjectDiscriminator', 'dateCreated']
+    });
+
+
+    var selectionControlCellEditing = Ext.create('Ext.grid.plugin.CellEditing', {
+        clicksToEdit: 1
+    });
+
+    // create the Grid
+    var selectionControlGrid = Ext.create('Ext.grid.Panel', {
+        id: 'profileGrids-selection-panel',
+        frame: true,
+        store: selectionControlGridStore,
+        stateful: true,
+        stateId: 'profileGrids-selection-state',
+        sealedColumns: true,
+        enableColumnMove: false,
+        enableColumnResize: true,
+        columns: [
+            {
+                header: 'Access Module',
+                width: 90,
+                sortable: true,
+                dataIndex: 'accessModule',
+                field: {
+                    xtype: 'textfield',
+                    allowBlank: false
+                }
+            },
+            {
+                header: 'Global Class',
+                width: 90,
+                sortable: true,
+                dataIndex: 'globalClass',
+                field: {
+                    xtype: 'textfield',
+                    allowBlank: false
+                }
+            },
+            {
+                header: 'Domains',
+                width: 90,
+                sortable: true,
+                dataIndex: 'domains',
+                field: {
+                    xtype: 'textfield',
+                    allowBlank: false
+                }
+            },
+            {
+                header: 'Node Name',
+                width: 90,
+                sortable: true,
+                dataIndex: 'nodeName',
+                field: {
+                    xtype: 'textfield',
+                    allowBlank: false
+                }
+            },
+            {
+                header: 'Subclass',
+                width: 90,
+                sortable: true,
+                dataIndex: 'subclass',
+                field: {
+                    xtype: 'textfield',
+                    allowBlank: false
+                }
+            },
+            {
+                header: 'Original Alarm Remain?',
+                width: 90,
+                sortable: true,
+                dataIndex: 'originalAlarmRemain',
+                field: {
+                    xtype: 'combobox',
+                    typeAhead: true,
+                    triggerAction: 'all',
+                    selectOnTab: true,
+                    store: [
+                        ['Yes', 'Yes'],
+                        ['No', 'No']
+                    ],
+                    lazyRender: true,
+                    listClass: 'x-combo-list-small'
+                }
+            },
+            {
+                header: 'Profile Name',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'profileId',
+                field: {
+                    xtype: 'textfield',
+                    allowBlank: false
+                }
+            },
+            {
+                header: 'Managed Object Discriminator',
+                width: 90,
+                sortable: true,
+                dataIndex: 'managedObjectDiscriminator',
+                field: {
+                    xtype: 'textfield',
+                    allowBlank: false
+                }
+            },
+            {
+                header: 'Date Created',
+                width: 85,
+                sortable: true,
+                renderer: Ext.util.Format.dateRenderer('m/d/Y'),
+                dataIndex: 'dateCreated',
+                field: {
+                    xtype: 'datefield',
+                    allowBlank: false
+                }
+
+            }
+        ],
+        height: 200,
+        width: '100%',
+        title: 'Selection Control',
+        viewConfig: {
+            stripeRows: true
+        },
+        plugins: [selectionControlCellEditing],
+        tbar: [
+            {
+                iconCls: 'icon-add',
+                text: 'Add Row',
+                handler: function () {
+                    // Create a record instance through the ModelManager
+                    var r = Ext.ModelManager.create({
+                        accessModule: 'NewRow',
+                        globalClass: '*',
+                        domains: '',
+                        nodeName: '',
+                        subclass: '',
+                        originalAlarmRemain: 'No',
+                        profileId: selectedProfile,
+                        managedObjectDiscriminator: '',
+                        dateCreated: Ext.Date.clearTime(new Date())
+                    }, 'SelectionControlModel');
+                    var rowCount = selectionControlGridStore.getCount();
+                    selectionControlGridStore.insert(rowCount, r);
+                    selectionControlCellEditing.startEditByPosition({row: rowCount, column: 0});
+                }
+            },{
+                xtype: 'button',
+                iconCls: 'icon-remove',
+                text: 'Remove Row',
+                handler: function () {
+                    if (selectionControlGrid.getSelectionModel().hasSelection()) {
+                        Ext.Msg.show({
+                            title: 'Confirm Action',
+                            msg: 'Are you sure you want to remove the selected row?',
+                            width: 300,
+                            buttons: Ext.Msg.YESNO,
+                            fn: function (btn) {
+                                if (btn == 'yes') {
+                                    var row = selectionControlGrid.getSelectionModel().getSelection()[0];
+                                    Ext.getBody().mask('Removing row from grid...');
+
+                                    if(row){
+                                        selectionControlGridStore.remove(row);
+                                    }
+                                    Ext.getBody().unmask();
+
+                                }
+                            },
+                            animateTarget: this,
+                            icon: Ext.Msg.QUESTION
+                        });
+                    } else {
+                        Ext.Msg.alert("Message", "Please select a row to remove.");
+                    }
+                }
+            }
+        ]
+    });
+
+    //PARAM EXTRACT GRID STARTS HERE
+    Ext.QuickTips.init();
+
+// setup the state provider, all state information will be saved to a cookie
+    Ext.state.Manager.setProvider(Ext.create('Ext.state.CookieProvider'));
+
+//// sample static data for the store
+//    var paramExtractGridData = [
+////        ['Profile1','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending'],
+//        ['$OOBSCName1','Additional Text','SubNetwork=ONRM_ROOT_MO_R,SubNetwork','StringBetween(\'=\',\',\')1','if ExtractChars($OOBSCName1,0,1) == "BS" then $OOBSCName1 else ""','9/1 12:00am']
+//    ];
+//
+//// create the data store
+//    var paramExtractGridStore = Ext.create('Ext.data.ArrayStore', {
+//        fields: [
+//            {name: 'targetAlarm'},
+//            {name: 'sourceAlarm'},
+//            {name: 'keyword'},
+//            {name: 'extractAfter'},
+//            {name: 'postProcessing'},
+//            {name: 'dateCreated',      type: 'date', dateFormat: 'n/j h:ia'}
+//        ],
+//        data: paramExtractGridData
+//    });
+
+    Ext.define('ParamExtractModel', {
+        extend: 'Ext.data.Model',
+        fields: [
+            {name: 'targetAlarmParameter'},
+            {name: 'sourceAlarmParameter'},
+            {name: 'keyword'},
+            {name: 'extractAfterKeyword'},
+            {name: 'postProcessing'},
+            {name: 'dateCreated',
+             type: 'date',
+             dateformat: 'd/m/Y'
+            },
+            {name: 'rowNum'}
+        ]
+    });
+
+    var paramExtractGridStore = new Ext.data.JsonStore({
+        storeId: 'profileGrids-paramextract-store',
+        autoLoad: false,
+        model: 'ParamExtractModel',
+        proxy: {
+            type: 'ajax',
+            url: 'getParamExtract.htm',
+            reader: {
+                type: 'json',
+                root: 'paramextract'
+            },
+            params: {profileId: '', albVersion: ''}
+        },
+        sorters: [
+            {
+                property : 'rowNum',
+                direction: 'ASC'
+            }
+        ],
+        remoteSort: true,
+
+        fields: ['targetAlarmParameter', 'sourceAlarmParameter', 'keyword', 'extractAfterKeyword', 'postProcessing', 'dateCreated', 'rowNum']
+    });
+
+
+//
+//    var paramExtractCellEditing = Ext.create('Ext.grid.plugin.CellEditing', {
+//        clicksToEdit: 1
+//    });
+    var myCodeMirror;
+
+    var paramExtractFormPanel = {
+        xtype: 'form',
+        height: 400,
+        //region: 'center',
+        id: 'paramextract-form',
+        url: 'insertParameterExtract.htm',
+        layout: 'form',
+        frame: false,
+        bodyPadding: 5,
+        //bodyBorder: false,
+        defaults: {
+            anchor: '90%',
+            labelWidth: 100
+        },
+        items: [
+            {
+                xtype: 'textfield',
+                id: 'txtTargetAlarmParameter',
+                name: 'pf-targetAlarmParameter',
+                fieldLabel: 'Target Alarm Parameter',
+                allowBlank: false
+            },
+            {
+                xtype: 'textfield',
+                id: 'txtSourceAlarmParameter',
+                name: 'pf-sourceAlarmParameter',
+                fieldLabel: 'Source Alarm Parameter',
+                allowBlank: false
+            },
+            {
+                xtype: 'textfield',
+                id: 'txtKeyword',
+                name: 'pf-keyword',
+                fieldLabel: 'Keyword',
+                allowBlank: true
+            },
+            {
+                xtype: 'textfield',
+                id: 'txtExtractAfterKeyword',
+                name: 'pf-extractAfterKeyword',
+                fieldLabel: 'Extract After Keyword',
+                allowBlank: false
+            },
+            {
+                xtype: 'textarea',
+                id: 'txtPostProcessing',
+                name: 'pf-postProcessing',
+                fieldLabel: 'Post-Processing',
+                allowBlank: true
+            },
+            {
+                xtype: 'hidden',
+                id: 'rowId',
+                name: 'pf-rowId',
+                value: -1
+            }
+        ],
+        buttons: [
+            {
+                text: 'Clear',
+                handler: function () {
+                    var form = Ext.getCmp('paramextract-form').getForm();
+
+                    form.findField('txtTargetAlarmParameter').setDisabled(false);
+                    resetCodeMirror();
+
+                    form.reset();
+
+                }
+            },
+            {
+                text: 'Save',
+                formBind: true,
+                disabled: true,
+                handler: submitParameterExtract
+            }
+        ],
+        listeners: {
+            afterrender: function (thisForm, options) {
+                this.keyNav = Ext.create('Ext.util.KeyNav', this.el, {
+                    scope: this
+                });
+            }
+        }
+    };
+
+
+    var paramExtractWindow = Ext.widget('window', {
+        title: 'Parameter Extract Form',
+        id: 'paramextract-window',
+        closeAction: 'hide',
+        width: 650,
+        height: 450,
+        layout: 'fit',
+        modal: true,
+        animateTarget: 'profileGrids-paramextract-panel',
+        items: [paramExtractFormPanel],
+        listeners: {
+            hide: function (form, action) {
+                resetCodeMirror();
+                Ext.getCmp('paramextract-form').getForm().reset();
+
+            },
+            afterrender: function (form, action) {
+
+                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                        alignWithWord: false,
+                        closeOnUnfocus: false
+                    });
+                };
+
+                var textAreaTest = Ext.getCmp('txtPostProcessing');
+                myCodeMirror = CodeMirror.fromTextArea(textAreaTest.inputEl.dom, {
+                    lineNumbers: true,
+                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                    lineWrapping: true
+                });
+
+
+            }
+        }
+    });
+
+    function resetCodeMirror() {
+        myCodeMirror.setValue('');
+        myCodeMirror.clearHistory();
+    }
+
+
+    function submitParameterExtract() {
+
+
+        var form = Ext.getCmp('paramextract-form').getForm();
+        if (form.isValid()) {
+            myCodeMirror.save(); //save the contents of the editor
+
+            form.submit({
+                params: {
+                    profileId: selectedProfile,
+                    albVersion: selectedVersion
+                },
+                waitTitle: 'Please wait.',
+                waitMsg: 'Saving Parameter Extraction Details',
+                success: function (form, action) {
+                    Ext.getCmp('paramextract-window').hide();
+
+//                    //reload store?
+//                    paramExtractGridStore.load({
+//                        params:{
+//                            profileId: selectedProfile,
+//                            albVersion: selectedVersion
+//                        }
+//                    });
+
+//                    var parameterExtractRecords = paramExtractGridStore.getRange();
+//
+//                    if (parameterExtractRecords.length > 0) {
+//                        var parameterExtractDataArray = new Array();
+//
+//                        for (var i in parameterExtractRecords) {
+//                            parameterExtractDataArray.push(parameterExtractRecords[i].data);
+//                        }
+//
+//                        var parameterExtractPostValue = JSON.stringify(parameterExtractDataArray);
+//                        parameterExtractPostValue = "{\"paramextract\":" + parameterExtractPostValue + "}";
+//
+//                        console.log(parameterExtractPostValue);
+//
+//                    }
+
+
+                    var rowId = form.findField('rowId').getValue();
+                    console.log('rowId is: ' + rowId);
+
+                    if (rowId == -1) {
+                        var s = Ext.ModelManager.create({
+                            targetAlarmParameter: form.findField('txtTargetAlarmParameter').getValue(),
+                            sourceAlarmParameter: form.findField('txtSourceAlarmParameter').getValue(),
+                            keyword: form.findField('txtKeyword').getValue(),
+                            extractAfterKeyword: form.findField('txtExtractAfterKeyword').getValue(),
+                            postProcessing: form.findField('txtPostProcessing').getValue(),
+                            dateCreated: Ext.Date.clearTime(new Date())
+                        }, 'ParamExtractModel');
+
+
+                        var rowCount2 = paramExtractGridStore.getCount();
+                        console.log(rowCount2);
+
+                        paramExtractGridStore.insert(rowCount2, s);
+                    } else {
+                        var rec = paramExtractGridStore.getAt(rowId);
+
+                        rec.set('targetAlarmParameter', form.findField('txtTargetAlarmParameter').getValue());
+                        rec.set('sourceAlarmParameter', form.findField('txtSourceAlarmParameter').getValue());
+                        rec.set('keyword', form.findField('txtKeyword').getValue());
+                        rec.set('extractAfterKeyword', form.findField('txtExtractAfterKeyword').getValue());
+                        rec.set('postProcessing', form.findField('txtPostProcessing').getValue());
+                    }
+
+
+                },
+                failure: function (form, action) {
+                    Ext.Msg.alert('Failed', 'Error saving to DB! ');
+
+                    paramExtractGridStore.load({
+                        params: {
+                            profileId: selectedProfile,
+                            albVersion: selectedVersion
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+
+    function checkDuplicateParameter(targetAlarmParameter, albVersion) {
+        //check targetAlarmParameter and (albVersion but only if rowId is not -1)
+
+        var form = Ext.getCmp('paramextract-form').getForm();
+        var targetAlarmParameter = form.findField('txtTargetAlarmParameter').getValue();
+        var rowId = form.findField('rowId').getValue();
+
+        if (rowId != -1) {
+
+        }
+
+    }
+
+
+    // create the Grid
+    var paramExtractGrid = Ext.create('Ext.grid.Panel', {
+        id: 'profileGrids-paramextract-panel',
+        iconCls:'icon-grid',
+        frame: false,
+        store: paramExtractGridStore,
+        stateful: true,
+        stateId: 'profileGrids-paramextract-state',
+        sealedColumns: true,
+        enableColumnMove: false,
+        enableColumnResize: true,
+        collapsible: true,
+        region:'north',
+        columns: [Ext.create('Ext.grid.RowNumberer'),
+            {
+                header: 'Target Alarm Parameter',
+                width: 150,
+                flex: 1,
+                sortable: true,
+                dataIndex: 'targetAlarmParameter'
+            },
+            {
+                header: 'Source Alarm Parameter',
+                width: 150,
+                flex: 1,
+                sortable: true,
+                dataIndex: 'sourceAlarmParameter'
+            },
+            {
+                header: 'Keyword',
+                width: 120,
+                sortable: true,
+                dataIndex: 'keyword'
+            },
+            {
+                header: 'Extract After Keyword',
+                width: 200,
+                sortable: true,
+                dataIndex: 'extractAfterKeyword'
+//                hidden: true
+            },
+            {
+                header: 'Post-processing',
+                width: 250,
+                sortable: true,
+                dataIndex: 'postProcessing'
+//                hidden:true
+            },
+            {
+                header: 'Date Created',
+                width: 85,
+                sortable: true,
+                renderer: Ext.util.Format.dateRenderer('d/m/Y'),
+                dataIndex: 'dateCreated'
+            }
+        ],
+        //height: '90%',
+        //width: '100%',
+        title: 'Parameter Extraction',
+        viewConfig: {
+            stripeRows: true,
+            plugins: {
+                ptype: 'gridviewdragdrop'
+            }
+
+        },
+        tbar: [
+            {
+                iconCls: 'icon-add',
+                text: 'Add Row',
+                handler: function () {
+                    var form = Ext.getCmp('paramextract-form').getForm();
+                    form.findField('txtTargetAlarmParameter').setDisabled(false);
+                    paramExtractWindow.show();
+
+                }
+            },{
+                xtype: 'button',
+                iconCls: 'icon-remove',
+                text: 'Remove Row',
+                handler: function () {
+                    if (paramExtractGrid.getSelectionModel().hasSelection()) {
+                        Ext.Msg.show({
+                            title: 'Confirm Action',
+                            msg: 'Are you sure you want to remove the selected row?',
+                            width: 300,
+                            buttons: Ext.Msg.YESNO,
+                            fn: function (btn) {
+                                if (btn == 'yes') {
+                                    var row = paramExtractGrid.getSelectionModel().getSelection()[0];
+                                    Ext.getBody().mask('Removing row from system...');
+
+                                    if(row){
+                                        paramExtractGridStore.remove(row);
+                                    }
+                                    Ext.getBody().unmask();
+                                }
+                            },
+                            animateTarget: this,
+                            icon: Ext.Msg.QUESTION
+                        });
+                    } else {
+                        Ext.Msg.alert("Message", "Please select a row to remove.");
+                    }
+                }
+            }
+        ],
+        listeners: {
+            itemdblclick: function (view, rec, node, index, e) {
+                paramExtractWindow.show();
+                var form = Ext.getCmp('paramextract-form').getForm();
+                form.findField('txtTargetAlarmParameter').setValue(rec.get('targetAlarmParameter'));
+                form.findField('txtTargetAlarmParameter').setDisabled(true);
+                form.findField('txtSourceAlarmParameter').setValue(rec.get('sourceAlarmParameter'));
+                form.findField('txtKeyword').setValue(rec.get('keyword'));
+                form.findField('txtExtractAfterKeyword').setValue(rec.get('extractAfterKeyword'));
+                form.findField('txtPostProcessing').setValue(rec.get('postProcessing'));
+                resetCodeMirror();
+                myCodeMirror.setValue(rec.get('postProcessing'));
+
+                form.findField('rowId').setValue(index);
+                console.log('index: ' + index);
+
+
+            }
+        }
+    });
+
+    Ext.QuickTips.init();
+    Ext.state.Manager.setProvider(Ext.create('Ext.state.CookieProvider'));
+
+    Ext.define('AlarmIdentifierModel', {
+        extend: 'Ext.data.Model',
+        fields: [
+            {name: 'eventId'},
+            {name: 'variables'},
+            {name: 'showAlarm'},
+            {name: 'databaseTable'},
+            {name: 'databaseAccess'},
+            {name: 'tableColumns'},
+            {name: 'additionalText'},
+            {name: 'probableCause'},
+            {name: 'perceivedSeverity'},
+            {name: 'alarmType'},
+            {name: 'userText'},
+            {name: 'label1'},
+            {name: 'label2'},
+            {name: 'label3'},
+            {name: 'label4'},
+            {name: 'label5'},
+            {name: 'label6'},
+            {name: 'label7'},
+            {name: 'label8'},
+            {name: 'label9'},
+            {name: 'label10'},
+            {name: 'dateCreated'},
+            {name: 'rowNum'}
+        ]
+    });
+
+    var alarmIdentifierGridStore = new Ext.data.JsonStore({
+        storeId: 'profileGrids-alarm-store',
+        autoLoad: false,
+        model: 'AlarmIdentifierModel',
+        proxy: {
+            type: 'ajax',
+            url: 'getAlarmIdentifiers.htm',
+            reader: {
+                type: 'json',
+                root: 'alarm'
+            },
+            params: {profileId: '', albVersion: ''}
+        },
+        sorters: [
+            {
+                property : 'rowNum',
+                direction: 'ASC'
+            }
+        ],
+        remoteSort: true,
+
+        fields: [
+            'eventId',
+            'variables',
+            'showAlarm',
+            'databaseTable',
+            'databaseAccess',
+            'tableColumns',
+            'additionalText',
+            'probableCause',
+            'perceivedSeverity',
+            'alarmType',
+            'userText',
+            'label1',
+            'label2',
+            'label3',
+            'label4',
+            'label5',
+            'label6',
+            'label7',
+            'label8',
+            'label9',
+            'label10',
+            'dateCreated',
+            'rowNum'
+        ]
+    });
+
+
+    //codemirror for each textarea
+    var additionalTextCM;
+    var userTextCM;
+    var label1CM;
+    var label2CM;
+    var label3CM;
+    var label4CM;
+    var label5CM;
+    var label6CM;
+    var label7CM;
+    var label8CM;
+    var label9CM;
+    var label10CM;
+
+    var Pos = CodeMirror.Pos;
+
+    function forEach(arr, f) {
+        for (var i = 0, e = arr.length; i < e; ++i) f(arr[i]);
+    }
+
+    function arrayContains(arr, item) {
+        if (!Array.prototype.indexOf) {
+            var i = arr.length;
+            while (i--) {
+                if (arr[i] === item) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return arr.indexOf(item) != -1;
+    }
+
+    function getVariables(){
+        //iterate through all the contents of the alarmIdentifierGridStore and get all the variables that can be taken
+        var counts = alarmIdentifierGridStore.getCount();
+
+        var variablePattern = '\\${1}[\\w]*(?=(\\s*\\=\\s+){1})';      //regular expression for getting all the labels in the variables which start with $XXXXXX = 'something'
+
+        var list = [], seen = {};
+        for(var i=0; i<counts; i++){
+            var regex = new RegExp(variablePattern, "g");
+            var text = alarmIdentifierGridStore.getAt(i).get('variables'), m;
+            console.log('text is : '+text);
+
+
+            while(m = regex.exec(text)){
+                if(!seen.hasOwnProperty(m[0])){
+                    console.log('seen?');
+                    seen[m[0]] = true;
+                    list.push(m[0]);
+                } else{
+                    console.log('not seen!');
+                }
+
+            }
+        }
+        return list;
+    }
+
+    function specialHint(editor, keywords, getToken, options){
+
+        alert('test');
+        // Find the token at the cursor
+        var cur = editor.getCursor(), token = getToken(editor, cur), tprop = token;
+        token.state = CodeMirror.innerMode(editor.getMode(), token.state).state;
+
+        // If it's not a 'word-style' token, ignore the token.
+        if (!/^[\w$_]*$/.test(token.string)) {
+            token = tprop = {start: cur.ch, end: cur.ch, string: "", state: token.state,
+                type: token.string == "." ? "property" : null};
+        }
+
+        return {list: getSpecialCompletions(token, keywords),
+            from: Pos(cur.line, token.start),
+            to: Pos(cur.line, token.end)};
+    }
+
+    function getSpecialCompletions(token, keywords) {
+        var found = [], start = token.string;
+        function maybeAdd(str) {
+            if (str.indexOf(start) == 0 && !arrayContains(found, str)) found.push(str);
+        }
+
+        forEach(keywords, maybeAdd);
+
+        return found;
+    }
+
+
+    var alarmIdentifierFormPanel = Ext.widget({
+//        title: 'Alarm Identifier',
+        xtype: 'form',
+        id: 'alarm-form',
+        url: 'insertAlarmIdentifier.htm',
+        collapsible: false,
+        bodyPadding: 5,
+        width: 550,
+        height: 'auto',
+        fieldDefaults: {
+            labelAlign: 'top',
+            msgTarget: 'side'
+        },
+        defaults: {
+            anchor: '100%'
+        },
+
+        items: [
+            {
+                xtype: 'tabpanel',
+                plain: true,
+                activeTab: 0,
+                height: 500,
+                deferredRender: false,
+                hideMode: 'offsets',
+                id: 'alarm-form-tabs',
+                defaults: {
+                    bodyPadding: 10
+                },
+                items: [
+                    {
+                        title: 'Main Details',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textfield',
+
+                        items: [
+                            {
+                                xtype: 'textfield',
+                                id: 'txtEventId',
+                                name: 'ai-eventId',
+                                fieldLabel: 'Event ID',
+                                allowBlank: true
+                            },
+                            {
+                                xtype: 'textfield',
+                                id: 'txtVariables',
+                                name: 'ai-variables',
+                                fieldLabel: 'Variables',
+                                allowBlank: true
+                            },
+                            {
+                                xtype: 'textfield',
+                                id: 'txtShowAlarm',
+                                name: 'ai-showAlarm',
+                                fieldLabel: 'Show Alarm',
+                                allowBlank: false
+                            },
+                            {
+                                xtype: 'textfield',
+                                id: 'txtDatabaseTable',
+                                name: 'ai-databaseTable',
+                                fieldLabel: 'Database Table',
+                                allowBlank: true
+                            },
+                            {
+                                xtype: 'textfield',
+                                id: 'txtDatabaseAccess',
+                                name: 'ai-databaseAccess',
+                                fieldLabel: 'Database Access',
+                                allowBlank: true
+                            },
+                            {
+                                xtype: 'textfield',
+                                id: 'txtTableColumns',
+                                name: 'ai-tableColumns',
+                                fieldLabel: 'Table Columns',
+                                allowBlank: true
+                            },
+//                            {
+//                                xtype: 'textfield',
+//                                id: 'txtAdditionalText',
+//                                name: 'ai-additionalText',
+//                                fieldLabel: 'Additional Text',
+//                                allowBlank: true
+//                            },
+                            {
+                                xtype: 'textfield',
+                                id: 'txtProbableCause',
+                                name: 'ai-probableCause',
+                                fieldLabel: 'Probable Cause',
+                                allowBlank: true
+                            },
+                            {
+                                xtype: 'textfield',
+                                id: 'txtPerceivedSeverity',
+                                name: 'ai-perceivedSeverity',
+                                fieldLabel: 'Perceived Severity',
+                                allowBlank: true
+                            },
+                            {
+                                xtype: 'textfield',
+                                id: 'txtAlarmType',
+                                name: 'ai-alarmType',
+                                fieldLabel: 'Alarm Type',
+                                allowBlank: true
+                            },
+                            {
+                                xtype: 'hidden',
+                                id: 'rowId',
+                                name: 'ai-rowId',
+                                value: -1
+
+                            }
+                        ]
+                    },
+                    {
+                        title: 'Additional Text',
+                        id: 'addtltext-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtAdditionalText',
+                                name: 'ai-additionalText',
+                                fieldLabel: 'Additional Text',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (additionalTextCM) {
+                                    CodeMirror.showHint(additionalTextCM, specialHint(additionalTextCM, getVariables(),
+                                        function (e, cur) {return e.getTokenAt(cur);},
+                                        options), {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var additionalText_cm = Ext.getCmp('txtAdditionalText');
+                                additionalTextCM = CodeMirror.fromTextArea(additionalText_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'usertext',
+                        id: 'usertext-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtUserText',
+                                name: 'ai-userText',
+                                fieldLabel: 'User Text',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var userText_cm = Ext.getCmp('txtUserText');
+                                userTextCM = CodeMirror.fromTextArea(userText_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'Label1',
+                        id: 'label1-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtLabel1',
+                                name: 'ai-label1',
+                                fieldLabel: 'Label1',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var label1_cm = Ext.getCmp('txtLabel1');
+                                label1CM = CodeMirror.fromTextArea(label1_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'Label2',
+                        id: 'label2-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtLabel2',
+                                name: 'ai-label2',
+                                fieldLabel: 'Label2',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var label2_cm = Ext.getCmp('txtLabel2');
+                                label2CM = CodeMirror.fromTextArea(label2_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'Label3',
+                        id: 'label3-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtLabel3',
+                                name: 'ai-label3',
+                                fieldLabel: 'Label3',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var label3_cm = Ext.getCmp('txtLabel3');
+                                label3CM = CodeMirror.fromTextArea(label3_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'Label4',
+                        id: 'label4-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtLabel4',
+                                name: 'ai-label4',
+                                fieldLabel: 'Label4',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var label4_cm = Ext.getCmp('txtLabel4');
+                                label4CM = CodeMirror.fromTextArea(label4_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'Label5',
+                        id: 'label5-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtLabel5',
+                                name: 'ai-label5',
+                                fieldLabel: 'Label5',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var label5_cm = Ext.getCmp('txtLabel5');
+                                label5CM = CodeMirror.fromTextArea(label5_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'Label6',
+                        id: 'label6-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtLabel6',
+                                name: 'ai-label6',
+                                fieldLabel: 'Label6',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var label6_cm = Ext.getCmp('txtLabel6');
+                                label6CM = CodeMirror.fromTextArea(label6_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'Label7',
+                        id: 'label7-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtLabel7',
+                                name: 'ai-label7',
+                                fieldLabel: 'Label7',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var label7_cm = Ext.getCmp('txtLabel7');
+                                label7CM = CodeMirror.fromTextArea(label7_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'Label8',
+                        id: 'label8-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtLabel8',
+                                name: 'ai-label8',
+                                fieldLabel: 'Label8',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var label8_cm = Ext.getCmp('txtLabel8');
+                                label8CM = CodeMirror.fromTextArea(label8_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'Label9',
+                        id: 'label9-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtLabel9',
+                                name: 'ai-label9',
+                                fieldLabel: 'Label9',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var label9_cm = Ext.getCmp('txtLabel9');
+                                label9CM = CodeMirror.fromTextArea(label9_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    },
+                    {
+                        title: 'Label10',
+                        id: 'label10-tab',
+                        defaults: {
+                            width: 230
+                        },
+                        defaultType: 'textarea',
+
+                        items: [
+                            {
+                                xtype: 'textarea',
+                                id: 'txtLabel10',
+                                name: 'ai-label10',
+                                fieldLabel: 'Label10',
+                                allowBlank: true,
+                                width: '100%',
+                                anchor    : '100%',
+                                rows: 15
+                            }
+                        ],
+                        listeners:{
+                            afterrender: function(){
+
+                                //userText
+                                CodeMirror.commands.autocomplete = function (myCodeMirror) {
+                                    CodeMirror.showHint(myCodeMirror, CodeMirror.hint.temip, {
+                                        alignWithWord: false,
+                                        closeOnUnfocus: false
+                                    });
+                                };
+
+                                var label10_cm = Ext.getCmp('txtLabel10');
+                                label10CM = CodeMirror.fromTextArea(label10_cm.inputEl.dom, {
+                                    lineNumbers: true,
+                                    extraKeys: {"Ctrl-Space": "autocomplete"},
+                                    lineWrapping: true
+                                });
+                            }
+                        }
+                    }
+
+                ],
+                listeners:{
+                    tabchange: function (tabPanel, newCard, oldCard) {
+
+                        //check the new tab first, and set the codemirror's value with the appropriate value from the hidden textarea
+                        if (newCard.id == 'usertext-tab') {
+                            userTextCM.setValue(Ext.getCmp('txtUserText').getValue());
+                        } else if (newCard.id == 'label1-tab') {
+                            label1CM.setValue(Ext.getCmp('txtLabel1').getValue());
+                        } else if (newCard.id == 'label2-tab') {
+                            label2CM.setValue(Ext.getCmp('txtLabel2').getValue());
+                        } else if (newCard.id == 'label3-tab') {
+                            label3CM.setValue(Ext.getCmp('txtLabel3').getValue());
+                        }else if (newCard.id == 'label4-tab') {
+                            label4CM.setValue(Ext.getCmp('txtLabel4').getValue());
+                        }else if (newCard.id == 'label5-tab') {
+                            label5CM.setValue(Ext.getCmp('txtLabel5').getValue());
+                        }else if (newCard.id == 'label6-tab') {
+                            label6CM.setValue(Ext.getCmp('txtLabel6').getValue());
+                        }else if (newCard.id == 'label7-tab') {
+                            label7CM.setValue(Ext.getCmp('txtLabel7').getValue());
+                        }else if (newCard.id == 'label8-tab') {
+                            label8CM.setValue(Ext.getCmp('txtLabel8').getValue());
+                        }else if (newCard.id == 'label9-tab') {
+                            label9CM.setValue(Ext.getCmp('txtLabel9').getValue());
+                        }else if (newCard.id == 'label10-tab') {
+                            label10CM.setValue(Ext.getCmp('txtLabel10').getValue());
+                        }else if (newCard.id == 'addtltext-tab'){
+                            additionalTextCM.setValue(Ext.getCmp('txtAdditionalText').getValue());
+                        }
+                        //no else, do nothing if not any of the above
+
+
+                        if (oldCard.id == 'usertext-tab') {
+//                            console.log('codemirror1a' + userTextCM.getValue());
+//                            console.log('txtUserText b4 save' + Ext.getCmp('txtUserText').getValue());
+                            userTextCM.save();
+//                            console.log('txtUserText after save' + Ext.getCmp('txtUserText').getValue());
+////                            userTextCM.refresh();
+//                            console.log('txtUserText after refresh' + Ext.getCmp('txtUserText').getValue());
+                        }else if (oldCard.id == 'label1-tab') {
+                            label1CM.save();
+                        } else if (oldCard.id == 'label2-tab') {
+                            label2CM.save();
+                        } else if (oldCard.id == 'label3-tab') {
+                            label3CM.save();
+                        }else if (oldCard.id == 'label4-tab') {
+                            label4CM.save();
+                        }else if (oldCard.id == 'label5-tab') {
+                            label5CM.save();
+                        }else if (oldCard.id == 'label6-tab') {
+                            label6CM.save();
+                        }else if (oldCard.id == 'label7-tab') {
+                            label7CM.save();
+                        }else if (oldCard.id == 'label8-tab') {
+                            label8CM.save();
+                        }else if (oldCard.id == 'label9-tab') {
+                            label9CM.save();
+                        }else if (oldCard.id == 'label10-tab') {
+                            label10CM.save();
+                        }else if (oldCard.id == 'addtltext-tab'){
+                            additionalTextCM.save();
+                        }
+                    }
+                }
+            }
+        ],
+
+        buttons: [
+            {
+                text: 'Clear',
+                handler: function () {
+                    var form = Ext.getCmp('alarm-form').getForm();
+                    form.findField('txtEventId').setDisabled(false);
+                    resetAlarmCodeMirror();
+
+                    this.up('form').getForm().reset();
+                }
+            },
+            {
+                text: 'Save',
+                formBind: true,
+                disabled: true,
+                handler: submitAlarmIdentifier
+            }
+        ]
+
+    });
+
+    var alarmIdentifierWindow = Ext.widget('window', {
+        title: 'Alarm Identifier',
+        id: 'alarm-window',
+        closeAction: 'hide',
+        width: 500,
+        height: 600,
+        layout: 'fit',
+        modal: true,
+        animateTarget: 'profileGrids-alarm-panel',
+        items: [alarmIdentifierFormPanel],
+        listeners: {
+            hide: function (form, action) {
+                Ext.getCmp('alarm-form').getForm().reset();
+                resetAlarmCodeMirror();
+
+                //force tab to 0 so that the last selected tab's codemirror gets properly updated
+                var tabpanel = Ext.getCmp('alarm-form-tabs').setActiveTab(0);
+            },
+            show: function(form, action) {
+                Ext.getCmp('alarm-form-tabs').setActiveTab(0);
+            }
+
+        }
+    });
+
+    function resetAlarmCodeMirror(){
+        userTextCM.setValue('');
+        userTextCM.clearHistory();
+
+        label1CM.setValue('');
+        label1CM.clearHistory();
+
+        label2CM.setValue('');
+        label2CM.clearHistory();
+
+        label3CM.setValue('');
+        label3CM.clearHistory();
+
+        label4CM.setValue('');
+        label4CM.clearHistory();
+
+        label5CM.setValue('');
+        label5CM.clearHistory();
+
+        label6CM.setValue('');
+        label6CM.clearHistory();
+
+        label7CM.setValue('');
+        label7CM.clearHistory();
+
+        label8CM.setValue('');
+        label8CM.clearHistory();
+
+        label9CM.setValue('');
+        label9CM.clearHistory();
+
+        label10CM.setValue('');
+        label10CM.clearHistory();
+
+        additionalTextCM.setValue('');
+        additionalTextCM.clearHistory();
+
+
+    }
+
+
+
+    function submitAlarmIdentifier() {
+
+        var form = Ext.getCmp('alarm-form').getForm();
+
+        //force set of tabpanel active tab to 0!
+        var tabpanel = Ext.getCmp('alarm-form-tabs').setActiveTab(0);
+
+        if (form.isValid()) {
+
+//            userTextCM.save();
+//            label1CM.save();
+//            label2CM.save();
+//            label3CM.save();
+//            label4CM.save();
+//            label5CM.save();
+//            label6CM.save();
+//            label7CM.save();
+//            label8CM.save();
+//            label9CM.save();
+//            label10CM.save();
+
+            form.submit({
+                params: {
+                    profileId: selectedProfile,
+                    albVersion: selectedVersion
+                },
+                waitTitle: 'Please wait.',
+                waitMsg: 'Saving Alarm Identifier Details',
+                success: function (form, action) {
+                    Ext.getCmp('alarm-window').hide();
+
+                    var rowId = form.findField('rowId').getValue();
+                    console.log('rowId is: ' + rowId);
+
+                    if (rowId == -1) {
+                        var t = Ext.ModelManager.create({
+                            eventId: form.findField('txtEventId').getValue(),
+                            variables: form.findField('txtVariables').getValue(),
+                            showAlarm: form.findField('txtShowAlarm').getValue(),
+                            databaseTable: form.findField('txtDatabaseTable').getValue(),
+                            databaseAccess: form.findField('txtDatabaseAccess').getValue(),
+                            tableColumns: form.findField('txtTableColumns').getValue(),
+                            additionalText: form.findField('txtAdditionalText').getValue(),
+                            probableCause: form.findField('txtProbableCause').getValue(),
+                            perceivedSeverity: form.findField('txtPerceivedSeverity').getValue(),
+                            alarmType: form.findField('txtAlarmType').getValue(),
+                            userText: form.findField('txtUserText').getValue(),
+                            label1: form.findField('txtLabel1').getValue(),
+                            label2: form.findField('txtLabel2').getValue(),
+                            label3: form.findField('txtLabel3').getValue(),
+                            label4: form.findField('txtLabel4').getValue(),
+                            label5: form.findField('txtLabel5').getValue(),
+                            label6: form.findField('txtLabel6').getValue(),
+                            label7: form.findField('txtLabel7').getValue(),
+                            label8: form.findField('txtLabel8').getValue(),
+                            label9: form.findField('txtLabel9').getValue(),
+                            label10: form.findField('txtLabel10').getValue(),
+                            dateCreated: Ext.Date.clearTime(new Date())
+                        }, 'AlarmIdentifierModel');
+                        var rowCount3 = alarmIdentifierGridStore.getCount();
+                        alarmIdentifierGridStore.insert(rowCount3, t);
+                    } else {
+                        var rec = alarmIdentifierGridStore.getAt(rowId);
+
+                        rec.set('eventId', form.findField('txtEventId').getValue());
+                        rec.set('variables', form.findField('txtVariables').getValue());
+                        rec.set('showAlarm', form.findField('txtShowAlarm').getValue());
+                        rec.set('databaseTable', form.findField('txtDatabaseTable').getValue());
+                        rec.set('databaseAccess', form.findField('txtDatabaseAccess').getValue());
+                        rec.set('tableColumns', form.findField('txtTableColumns').getValue());
+                        rec.set('additionalText', form.findField('txtAdditionalText').getValue());
+                        rec.set('probableCause', form.findField('txtProbableCause').getValue());
+                        rec.set('perceivedSeverity', form.findField('txtPerceivedSeverity').getValue());
+                        rec.set('alarmType', form.findField('txtAlarmType').getValue());
+                        rec.set('userText', form.findField('txtUserText').getValue());
+                        rec.set('label1', form.findField('txtLabel1').getValue());
+                        rec.set('label2', form.findField('txtLabel2').getValue());
+                        rec.set('label3', form.findField('txtLabel3').getValue());
+                        rec.set('label4', form.findField('txtLabel4').getValue());
+                        rec.set('label5', form.findField('txtLabel5').getValue());
+                        rec.set('label6', form.findField('txtLabel6').getValue());
+                        rec.set('label7', form.findField('txtLabel7').getValue());
+                        rec.set('label8', form.findField('txtLabel8').getValue());
+                        rec.set('label9', form.findField('txtLabel9').getValue());
+                        rec.set('label10', form.findField('txtLabel10').getValue());
+                    }
+                },
+                failure: function (form, action) {
+                    Ext.Msg.alert('Failed', 'Error saving to DB! ');
+
+                    alarmIdentifierGridStore.load({
+                        params: {
+                            profileId: selectedProfile,
+                            albVersion: selectedVersion
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    var alarmIdentifierGrid = Ext.create('Ext.grid.Panel', {
+        id: 'profileGrids-alarm-panel',
+        iconCls:'icon-grid',
+        frame: false,
+        store: alarmIdentifierGridStore,
+        stateful: true,
+        stateId: 'profileGrids-alarm-state',
+        sealedColumns: true,
+        enableColumnMove: false,
+        enableColumnResize: true,
+        region:'south',
+        collapsible: true,
+        columns: [ Ext.create('Ext.grid.RowNumberer'),
+            {
+                header: 'Event ID',
+                width: 90,
+                sortable: false,
+                flex:1,
+                dataIndex: 'eventId'
+            },
+            {
+                header: 'Variables',
+                width: 90,
+                sortable: false,
+                flex:1,
+                dataIndex: 'variables'
+            },
+            {
+                header: 'Show Alarm',
+                width: 90,
+                sortable: false,
+                flex:1,
+                dataIndex: 'showAlarm'
+            },
+            {
+                header: 'Database Table',
+                width: 90,
+                sortable: false,
+                dataIndex: 'databaseTable'
+            },
+            {
+                header: 'Database Access',
+                width: 90,
+                sortable: false,
+                dataIndex: 'databaseAccess'
+            },
+            {
+                header: 'Table Columns',
+                width: 90,
+                sortable: false,
+                dataIndex: 'tableColumns'
+            },
+            {
+                header: 'Additional Text',
+                width: 90,
+                sortable: false,
+                flex:1,
+                dataIndex: 'additionalText'
+            },
+            {
+                header: 'Probable Cause',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'probableCause'
+            },
+            {
+                header: 'Perceived Severity',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'perceivedSeverity'
+//                hidden: true
+            },
+            {
+                header: 'Alarm Type',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'alarmType'
+//                hidden: true
+            },
+            {
+                header: 'User Text',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'userText'
+//                hidden: true
+            },
+            {
+                header: 'Label 1',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'label1'
+//                hidden: true
+            },
+            {
+                header: 'Label 2',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'label2'
+//                hidden: true
+            },
+            {
+                header: 'Label 3',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'label3'
+//                hidden: true
+            },
+            {
+                header: 'Label 4',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'label4'
+//                hidden: true
+            },
+            {
+                header: 'Label 5',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'label5'
+//                hidden: true
+            },
+            {
+                header: 'Label 6',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'label6'
+//                hidden: true
+            },
+            {
+                header: 'Label 7',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'label7'
+//                hidden: true
+            },
+            {
+                header: 'Label 8',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'label8'
+//                hidden: true
+            },
+            {
+                header: 'Label 9',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'label9'
+//                hidden: true
+            },
+            {
+                header: 'Label 10',
+                flex: 1,
+                sortable: false,
+                dataIndex: 'label10'
+//                hidden: true
+            },
+            {
+                header: 'Date Created',
+                width: 85,
+                sortable: true,
+                renderer: Ext.util.Format.dateRenderer('m/d/Y'),
+                dataIndex: 'dateCreated'
+            }
+        ],
+        //height: '90%',
+        //width: '100%',
+        title: 'Alarm Identifier',
+        viewConfig: {
+            stripeRows: true,
+            plugins: {
+                ptype: 'gridviewdragdrop'
+            }
+        },
+        tbar: [
+            {
+                iconCls: 'icon-add',
+                text: 'Add Row',
+                handler: function () {
+                    var form = Ext.getCmp('alarm-form').getForm();
+                    form.findField('txtEventId').setDisabled(false);
+                    alarmIdentifierWindow.show();
+                }
+            },{
+                xtype: 'button',
+                iconCls: 'icon-remove',
+                text: 'Remove Row',
+                handler: function () {
+                    if (alarmIdentifierGrid.getSelectionModel().hasSelection()) {
+                        Ext.Msg.show({
+                            title: 'Confirm Action',
+                            msg: 'Are you sure you want to remove the selected row?',
+                            width: 300,
+                            buttons: Ext.Msg.YESNO,
+                            fn: function (btn) {
+                                if (btn == 'yes') {
+                                    var row = alarmIdentifierGrid.getSelectionModel().getSelection()[0];
+                                    Ext.getBody().mask('Removing row...');
+
+                                    if(row){
+                                        alarmIdentifierGridStore.remove(row);
+                                    }
+                                    Ext.getBody().unmask();
+
+                                }
+                            },
+                            animateTarget: this,
+                            icon: Ext.Msg.QUESTION
+                        });
+                    } else {
+                        Ext.Msg.alert("Message", "Please select a row to remove.");
+                    }
+                }
+            }
+        ],
+        listeners: {
+            itemdblclick: function (view, rec, node, index, e) {
+                alarmIdentifierWindow.show();
+                var form = Ext.getCmp('alarm-form').getForm();
+                form.findField('txtEventId').setValue(rec.get('eventId'));
+                form.findField('txtEventId').setDisabled(true);
+                form.findField('txtVariables').setValue(rec.get('variables'));
+                form.findField('txtShowAlarm').setValue(rec.get('showAlarm'));
+                form.findField('txtDatabaseTable').setValue(rec.get('databaseTable'));
+                form.findField('txtDatabaseAccess').setValue(rec.get('databaseAccess'));
+                form.findField('txtTableColumns').setValue(rec.get('tableColumns'));
+                form.findField('txtAdditionalText').setValue(rec.get('additionalText'));
+                form.findField('txtProbableCause').setValue(rec.get('probableCause'));
+                form.findField('txtPerceivedSeverity').setValue(rec.get('perceivedSeverity'));
+                form.findField('txtAlarmType').setValue(rec.get('alarmType'));
+                form.findField('txtUserText').setValue(rec.get('userText'));
+                form.findField('txtLabel1').setValue(rec.get('label1'));
+                form.findField('txtLabel2').setValue(rec.get('label2'));
+                form.findField('txtLabel3').setValue(rec.get('label3'));
+                form.findField('txtLabel4').setValue(rec.get('label4'));
+                form.findField('txtLabel5').setValue(rec.get('label5'));
+                form.findField('txtLabel6').setValue(rec.get('label6'));
+                form.findField('txtLabel7').setValue(rec.get('label7'));
+                form.findField('txtLabel8').setValue(rec.get('label8'));
+                form.findField('txtLabel9').setValue(rec.get('label9'));
+                form.findField('txtLabel10').setValue(rec.get('label10'));
+                form.findField('rowId').setValue(index);
+
+                userTextCM.refresh();
+                console.log('index: ' + index);
+            }
+        }
+    });
+
+
+    var gridContainer = Ext.create('Ext.panel.Panel', {
+        //layout: 'border',
+        id: 'profileGrids-panel',
+        items: [paramExtractGrid, alarmIdentifierGrid],
+        title: 'Profile Name: ',
+        bodyBorder: false,
+        defaults: {
+            collapsible: true,
+            split: false
+        },
+        layout: {
+            // layout-specific configs go here
+            type: 'accordion',
+            titleCollapse: false,
+            animate: true,
+            //activeOnTop: true
+            multi: true
+        },
+        listeners: {
+            activate: function (gridContainer, eOpts) {
+                console.log('selectedProfile is : ' + selectedProfile);
+                this.setTitle('Profile Name: ' + selectedProfile);
+                console.log('selectedVersion is : ' + selectedVersion);
+                paramExtractGridStore.load({
+                    params: {
+                        profileId: selectedProfile,
+                        albVersion: selectedVersion
+                    }
+                });
+                alarmIdentifierGridStore.load({
+                    params: {
+                        profileId: selectedProfile,
+                        albVersion: selectedVersion
+                    },
+                    callback: function(records, options, success){
+                        console.log('variables:'+getVariables());
+                    }
+
+                });
+                selectionControlGridStore.load({
+                    params: {
+                        profileId: selectedProfile,
+                        albVersion: selectedVersion
+                    },
+                    callback : function(records, options, success) {
+                        if (success) {
+                            console.log('b4'+selectedAccessModule);
+                            if(records.length > 0){
+                            selectedAccessModule = records[0].get('accessModule');
+                            }
+                            console.log('after'+selectedAccessModule);
+                        }
+                    }
+                })
+
+
+            }
+        },
+        fbar: [
+            {
+                iconCls: 'icon-save',
+                text: 'Save',
+                handler: function () {
+                    {
+                        var parameterExtractRecords = paramExtractGridStore.getRange();
+                        var alarmIdentifierRecords = alarmIdentifierGridStore.getRange();
+
+                        if (parameterExtractRecords.length > 0 || alarmIdentifierRecords.length > 0) {
+                            var parameterExtractDataArray = new Array();
+                            var alarmIdentifierDataArray = new Array();
+                            var finalPostValue;
+
+                            for (var i in parameterExtractRecords) {
+                                parameterExtractDataArray.push(parameterExtractRecords[i].data);
+                            }
+
+                            for (var i in alarmIdentifierRecords) {
+                                alarmIdentifierDataArray.push(alarmIdentifierRecords[i].data);
+                            }
+
+                            var parameterExtractPostValue = JSON.stringify(parameterExtractDataArray);
+                            parameterExtractPostValue = "{\"paramextract\":" + parameterExtractPostValue + "}";
+                            var alarmIdentifierPostValue = JSON.stringify(alarmIdentifierDataArray);
+                            alarmIdentifierPostValue = "{\"alarmident\":" + alarmIdentifierPostValue + "}";
+                            finalPostValue = "{\"postvalue\":[" + parameterExtractPostValue + ',' + alarmIdentifierPostValue + "]}";
+                            console.log(finalPostValue);
+
+                            Ext.getBody().mask('Saving All Profile Details...');
+                            Ext.Ajax.request(
+                                {
+                                    url: 'insertFullProfile.htm',
+                                    method: 'POST',
+                                    params: {dataArray: finalPostValue, profileId: selectedProfile, albVersion: selectedVersion, accessModule: selectedAccessModule},
+                                    success: function (response) {
+                                        Ext.Msg.alert("Success", "All Profile Details saved successfully.");
+                                    },
+                                    failure: function (response) {
+                                        Ext.Msg.alert("Fail", "Fail to save Profile Details.");
+                                    },
+                                    callback: function () {
+                                        Ext.getBody().unmask();
+                                    }
+                                }
+                            );
+                        } else {
+                            Ext.Msg.alert("No Changes", "Nothing to save.")
+                        }
+                    }
+                }
+            },{
+                iconCls: 'icon-back',
+                text: 'Back to Profile List',
+                handler: function () {
+                    selectedProfile = undefined;
+                    Ext.getCmp('content-panel').layout.setActiveItem('profileManagement-panel');
+                }
+
+            }
+        ]
+
+    });
+
+    return gridContainer;
+}
+
+
+
+
+
+

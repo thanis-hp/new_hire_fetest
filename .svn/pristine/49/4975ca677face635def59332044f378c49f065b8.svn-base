@@ -1,0 +1,254 @@
+package com.hp.temip.alb_gui.service;
+
+import com.hp.temip.alb_gui.dao.AlbHostMapper;
+import com.hp.temip.alb_gui.dao.ProfileMapper;
+import com.hp.temip.alb_gui.domain.*;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.*;
+import java.util.List;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 8/16/12
+ * Time: 12:08 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Service("ProfileService")
+@Transactional(readOnly = false)
+public class ProfileService {
+    @Autowired
+    private ProfileMapper profileMapper;
+
+    @Autowired
+    private AlbHostMapper albHostMapper;
+
+    private Log logger = LogFactory.getLog(getClass());
+
+
+    public List<ProfileGridObject> getProfileList() {
+        return (List<ProfileGridObject>) profileMapper.getProfileList();
+    }
+
+    public List<String> getUniqueProfileList() {
+        return (List<String>) profileMapper.getUniqueProfileList();
+    }
+
+    public List<Integer> getVersions(String profileId){
+        return (List<Integer>) profileMapper.getVersions(profileId);
+    }
+
+    public int updateProfileTranslateStatus(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.updateProfileTranslateStatus(profileGridObject);
+    }
+
+    public int updateProfileDeployStatus(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.updateProfileDeployStatus(profileGridObject);
+    }
+
+
+    public long getTopAlbVersion(String profileId) {
+        return (long) profileMapper.getTopAlbVersion(profileId);
+    }
+
+    public List<ProfileGridObject> checkProfileExists(String profileId) {
+        return (List<ProfileGridObject>) profileMapper.checkProfileExists(profileId);
+    }
+
+    public List<ProfileGridObject> getSingleProfile(ProfileGridObject profileGridObject) {
+        return (List<ProfileGridObject>) profileMapper.getSingleProfile(profileGridObject);
+    }
+
+    public int insertNewProfile(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.insertNewProfile(profileGridObject);
+    }
+
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
+    public int removeProfile(ProfileGridObject profileGridObject) throws Exception{
+        int result = 0;
+
+        result = profileMapper.removeAlarmIdentifier(profileGridObject);
+        result = profileMapper.removeParameterExtraction(profileGridObject);
+        result = profileMapper.removeSelectionControl(profileGridObject);
+        result = profileMapper.removeProfile(profileGridObject);
+        result = profileMapper.removeProfileHost(profileGridObject);
+
+
+        return result;
+    }
+
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
+    public int removeRow(ProfileGridObject profileGridObject) throws Exception{
+        int result = 0;
+
+        result = profileMapper.removeProfileHost(profileGridObject);
+
+
+        return result;
+    }
+
+
+
+    /**
+     * PROPER INSERT with transactions
+     * @return
+     */
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
+    public int insertProfile(ProfileGridObject profileGridObject, SelectionControlGridObject selectionControlGridObject,
+                             List<ParameterExtractGridObject> parameterExtractGridObjects,
+                             List<AlarmIdentifierGridObject> alarmIdentifierGridObjects) throws Exception{
+
+        int result = 0;
+
+        //insert the profile
+        result = profileMapper.insertNewProfile(profileGridObject);
+        logger.debug("Result after insertNewProfile:"+result);
+
+        //get list of hosts, insert the profilehost for each
+        List<AlbHostGridObject> hosts = albHostMapper.getHostList();
+
+        for(AlbHostGridObject host: hosts){
+            profileGridObject.setHostId(""+host.getHostId()); //FIXME hacked way of setting to string
+            result = profileMapper.insertProfileHost(profileGridObject);
+        }
+
+        //insert the selection control
+        result = profileMapper.insertNewSelectionControl(selectionControlGridObject);
+        logger.debug("Result after insertNewSelectionControl:"+result);
+
+        //iterate through the list of parameter extraction and insert each one
+        for(ParameterExtractGridObject parameterExtractGridObject: parameterExtractGridObjects){
+            result = profileMapper.insertNewParameterExtract(parameterExtractGridObject);
+            logger.debug("Result after insertNewParameter:"+result);
+        }
+
+
+        //iterate through the list of alarm identifiers and insert each one
+        for(AlarmIdentifierGridObject alarmIdentifierGridObject: alarmIdentifierGridObjects){
+            result = profileMapper.insertNewAlarmIdentifier(alarmIdentifierGridObject);
+            logger.debug("Result after insertNewAlarmIdentifier:"+result);
+        }
+
+        logger.debug("Result after all:"+result);
+
+        return result;
+    }
+
+
+
+    public List<SelectionControlGridObject> getSelectionControl(SelectionControlGridObject selectionControlGridObject) {
+        return (List<SelectionControlGridObject>) profileMapper.getSelectionControl(selectionControlGridObject);
+    }
+
+    public List<ParameterExtractGridObject> getParameterExtract(ParameterExtractGridObject parameterExtractGridObject) {
+        return (List<ParameterExtractGridObject>) profileMapper.getParameterExtract(parameterExtractGridObject);
+    }
+
+    public List<AlarmIdentifierGridObject> getAlarmIdentifier(AlarmIdentifierGridObject alarmIdentifierGridObject) {
+        return (List<AlarmIdentifierGridObject>) profileMapper.getAlarmIdentifier(alarmIdentifierGridObject);
+    }
+
+
+    public int insertNewSelectionControl(SelectionControlGridObject selectionControlGridObject){
+        return (int) profileMapper.insertNewSelectionControl(selectionControlGridObject);
+    }
+
+    public int insertNewParameterExtract(ParameterExtractGridObject parameterExtractGridObject){
+        return (int) profileMapper.insertNewParameterExtract(parameterExtractGridObject);
+    }
+
+    public int insertNewAlarmIdentifier(AlarmIdentifierGridObject alarmIdentifierGridObject){
+        return (int) profileMapper.insertNewAlarmIdentifier(alarmIdentifierGridObject);
+    }
+
+    /**
+     * @param profileId
+     * @param hostIp
+     * @return
+     */
+    public int copyFiles(String profileId, String hostIp, String outputDir) {
+
+        String scriptResult = "";
+        int exitValue = 0;
+
+        try {
+
+            String selectedOperationFileName = "/usr/bin/scp";
+            String args0 = "-r";
+            String args1 = profileId;
+            String args2 = "temip@"+hostIp+":"+outputDir;
+            ProcessBuilder pb = new ProcessBuilder(selectedOperationFileName, args0, args1, args2);
+            pb.redirectErrorStream(true); //send error stream to inputstream as well!
+            //set working directory!
+            logger.debug("args1: "+args1);
+            logger.debug("outputDir is: "+outputDir);
+
+            pb.directory(new File(outputDir)); //set working directory to the same as local outputDir
+
+
+            Process p = pb.start();
+            InputStream in = null;
+
+            in = p.getInputStream();
+
+            //append the result!
+            scriptResult += convertStreamToStr(in);
+            exitValue = p.waitFor();
+            in.close();
+
+            p.destroy(); //destroy!
+            logger.debug("exitValue: "+exitValue);
+
+            String escaped = StringEscapeUtils.escapeJavaScript(scriptResult);
+            logger.debug("escaped result?: \n" + escaped);
+
+//            result += "{\"success\":true, \"data\":{\"result\":\"" + escaped + "\"}}";
+
+        } catch (Exception e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            scriptResult += "\nError in executing script!\nDetailed Error:\n" + e.getMessage();
+//            result += "{\"success\":false, \"data\":{\"result\":\""+ StringEscapeUtils.escapeJavaScript(scriptResult)+"\"}}";
+//            status = ERROR_STATUS;
+        } finally {
+
+            //0 - means success!
+            return exitValue;
+        }
+    }
+
+    /**
+     *
+     * @param is
+     * @return
+     * @throws IOException
+     */
+    public static String convertStreamToStr(InputStream is) throws IOException {
+
+        if (is != null) {
+            Writer writer = new StringWriter();
+
+            char[] buffer = new char[1024];
+            try {
+                Reader reader = new BufferedReader(new InputStreamReader(is,
+                        "UTF-8"));
+                int n;
+                while ((n = reader.read(buffer)) != -1) {
+                    writer.write(buffer, 0, n);
+                }
+            } finally {
+                is.close();
+            }
+            return writer.toString();
+        }
+        else {
+            return "";
+        }
+    }
+}

@@ -1,0 +1,68 @@
+package com.hp.temip.alb_gui.controller;
+
+import com.hp.temip.alb_gui.domain.UserAccessAudit;
+import com.hp.temip.alb_gui.service.UserAccessAuditService;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.servlet.ModelAndView;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 8/22/12
+ * Time: 6:53 PM
+ * To change this template use File | Settings | File Templates.
+ */
+
+@Controller
+/*@RequestMapping("authenticate.htm")*/
+public class AuthenticationController {
+    private Log logger = LogFactory.getLog(getClass());
+
+    private UserAccessAuditService service;
+
+    @Autowired
+    public void setService(UserAccessAuditService service) {
+        this.service = service;
+    }
+
+    @RequestMapping(value = "/authenticate.htm", method = RequestMethod.GET)
+    public String getLoginPage() {
+        return "login";
+    }
+
+    @RequestMapping(value = "/logout2.htm")
+    public ModelAndView getLogoutPage() {
+
+        updateAudit();
+
+        ModelAndView modelAndView = new ModelAndView("redirect:logout.htm");
+
+        return modelAndView;
+    }
+
+    private void updateAudit() {
+        try {
+            org.springframework.security.core.userdetails.User test = (org.springframework.security.core.userdetails.User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            String sessionId = ((WebAuthenticationDetails) SecurityContextHolder.getContext().getAuthentication().getDetails()).getSessionId();
+
+            UserAccessAudit userAccessAudit = new UserAccessAudit();
+
+            userAccessAudit.setUserId(test.getUsername());
+            userAccessAudit.setSessionId(sessionId);
+
+            service.updateAudit(userAccessAudit);
+
+            logger.info("Audit Message was successfully updated: " + userAccessAudit.toString());
+        } catch (Exception e) {
+            logger.error("Fail to update Audit Log.");
+            e.printStackTrace();
+        }
+    }
+}

@@ -1,0 +1,798 @@
+Ext.require([ '*' ]);
+var cw, viewport, isNetworkKPIShow, grid, path, borderPath, vobbPath, vobbBorderPath;
+var arr = new Array();
+
+var is2leg = false;
+var topoTabPanel;
+var deviceIp;
+var portParam;
+
+var borderArr = new Array();
+var cpuKpiArr = new Array();
+var utilzKpiArr = new Array();
+var nodeDetailArr = new Array();
+var borderDetailArr = new Array();
+
+var slas = new Array();
+
+var kpi_x1, kpi_y1, kpi_x2, kpi_y2 = 0;
+
+var treeStore = Ext.create('Ext.data.TreeStore', {
+    root: {
+        expanded: true
+    },
+    proxy: {
+        type: 'ajax',
+        url: 'getUserTree.htm'
+    }
+});
+
+var treePanel = Ext.create('Ext.tree.Panel', {
+    id:'tree-panel',
+    title:'User Menu',
+    region:'west',
+    split:true,
+    height:300,
+    width:'20%',
+    minWidth:100,
+    rootVisible:false,
+    autoScroll:true,
+    collapsible:true,
+    store:treeStore,
+    fbar:[
+        {
+            text:'Log Out',
+            width:120,
+            handler:function () {
+                Ext.MessageBox.show({
+                    title:'Logout from HP SPANMS',
+                    msg:'Are you sure?',
+                    buttons:Ext.MessageBox.OKCANCEL,
+                    fn:function (btn) {
+                        if (btn == 'ok') {
+                            window.location = "logout2.htm";
+                        }
+                    },
+                    animateTarget:'tree-panel',
+                    icon:Ext.MessageBox.QUESTION
+                });
+
+
+            }
+        }
+    ]
+});
+
+treePanel.getSelectionModel().on('select', function (selModel, record) {
+    treePanel.getSelectionModel().deselectAll(true);
+    if (record.get('leaf')) {
+
+        if (record.get('id') == 'topology') {
+            stopAllTask();
+            modelWin.show();
+        } else {
+            stopAllTask();
+            Ext.getCmp('content-panel').layout.setActiveItem(record.get('id') + '-panel');
+        }
+    }
+});
+
+var formPanel = {
+    xtype:'form',
+    height:300,
+    id:'form',
+    url:'putSubscriberId.htm',
+    layout:'form',
+    frame:true,
+    bodyPadding:10,
+    defaults:{
+        anchor:'100%',
+        labelWidth:100
+    },
+    items       : [
+        {
+        	xtype: 'textfield',
+        	id:'txtSubId',
+        	name: 'subscriberId',
+        	fieldLabel: 'Subscriber Id',
+        	allowBlank: false
+        },{
+            xtype: 'label',
+            forId: 'txtSubId',
+            html: '<span style="color:grey;font-style:italic;">e.g. name@unifi or name@iptv or 603012345678</span>'
+        }
+    ],
+    buttons: [{
+        text: 'Reset',
+        handler: function() {
+            this.up('form').getForm().reset();
+        }
+    }, {
+        text: 'Submit',
+        formBind: true,
+        disabled: true,
+        handler: submitGetTopologyForm
+    }],
+    listeners: {
+        afterRender: function(thisForm, options){
+            this.keyNav = Ext.create('Ext.util.KeyNav', this.el, {
+                enter: submitGetTopologyForm,
+                scope: this
+            });
+        }
+    }
+};
+
+Ext.define('ServiceComboModel', {
+    extend: 'Ext.data.Model',
+    fields: [
+        {name: 'name',    type: 'string'},
+        {name: 'value',  type: 'string'}
+    ]
+});
+
+var serviceComboStore = Ext.create('Ext.data.Store', {
+    id: 'testStore',
+    autoLoad: false,
+    model: 'ServiceComboModel',
+    proxy: {
+        type: 'memory',
+        reader: {
+            type: 'json',
+            root: 'services'
+        }
+    }
+});
+
+function submitGetTopologyForm() {
+    var form = Ext.getCmp('form').getForm();
+    if (form.isValid()) {
+
+        form.submit({
+            waitTitle:'Please wait.',
+            waitMsg:'Searching Subscriber...',
+            success:function (form, action) {
+                Ext.getCmp('topologySearchWindow').hide();
+
+                var topoServiceCombo = Ext.getCmp('servicesCombo');
+                topoServiceCombo.store.reload();
+                topoServiceCombo.store.loadData(action.result.data.services, false);
+                topoServiceCombo.setValue(Ext.getCmp('txtSubId').getValue());
+
+                toggleVOBBFields(topoServiceCombo.getRawValue());
+
+                is2leg = false;
+                getTopology(Ext.getCmp('txtSubId').getValue(), false);
+
+                Ext.getCmp('content-panel').layout.setActiveItem('topology-panel');
+                topoTabPanel.setActiveTab(0)
+            },
+            failure:function (form, action) {
+                Ext.Msg.alert('Failed', 'No Subscriber Found!!! ');
+            }
+        });
+    }
+}
+
+var modelWin = Ext.widget('window', {
+    title:'Subscriber Form',
+    id:'topologySearchWindow',
+    closeAction:'hide',
+    width:400,
+    height:150,
+    layout:'fit',
+    modal:true,
+    animateTarget:'tree-panel',
+    items:[formPanel]
+});
+
+var getSelectedNode = function getSelectedNode(){
+	if (selectedNode == undefined){
+		return arr;
+	}else{
+		return selectedNode;
+	}		
+};
+
+var topology_layout = function topology_layout() {
+
+    var layoutItems = [];
+    Ext.Object.each(getLayout(), function(name, example) {
+        layoutItems.push(example);
+    });
+
+    var contentPanel = {
+        id: 'content-panel',
+        region: 'center', // this is what makes this panel into a region within the containing layout
+        layout: 'card',
+        margins: '0 2 2 1',
+        activeItem: 0,
+        border: false,
+        items: layoutItems
+    };
+
+    viewport = Ext.create('Ext.Viewport', {
+        id:'borderViewPort',
+        title: 'HP T&D TM SPANMS',
+        layout:{
+            type:'border',
+            padding:5
+        },
+        defaults:{
+            split:true
+        },
+        items:[ treePanel, contentPanel ]
+    });
+
+
+};
+
+var createToolTips = function createToolTips(obj){
+	for (i in obj){
+		for (idx in linkArray){
+			if (null != obj[i]){
+				if ((linkArray[idx][1].split(':')[0] == obj[i].sourceEquipName) && (linkArray[idx][2].split(':')[0] == obj[i].destinationEquipName)){
+                    if(Ext.getCmp(obj[i].sourceEquipName + obj[i].destinationEquipName + '_net_tip') == undefined){
+					var tip = Ext.create('Ext.tip.ToolTip', {
+                        //id: obj[i].sourceEquipName + obj[i].destinationEquipName + '_net_tip',
+						autoHide:true, //confirmed with thanis
+						closable: false,
+						floating: false,
+						draggable:false,
+                        hideDelay: 1000,
+						title:obj[i].sourceEquipName + "-"+obj[i].destinationEquipName,
+					    target:linkArray[idx][0],
+					    trackMouse:false,
+					    html: 'Latency: '+obj[i].latency + ' , Jitter : '+obj[i].jitter + ' , Packet Loss: '+obj[i].packetLoss
+					});
+                    } else {
+                        Ext.getCmp(obj[i].sourceEquipName + obj[i].destinationEquipName + '_net_tip').update(
+                            'Latency: '+obj[i].latency + ' , Jitter : '+obj[i].jitter + ' , Packet Loss: '+obj[i].packetLoss);
+                    }
+				}
+			}			
+		}
+		
+	}
+};
+
+var selectNetworkKPI = function selectNetworkKPI(){
+    Ext.getBody().mask('Refreshing Network KPI...');
+	 Ext.Ajax.request({
+			url : 'selectNetworkKPI.htm',
+			method : 'POST',
+			params : {networkElements:linkArray},
+			success : function(response) {
+				var obj = JSON.parse(response.responseText);
+				createToolTips(obj);
+				//Ext.QuickTips.init();
+                Ext.getBody().unmask();
+			},
+			failure : function(response) {
+				alert('Failed due to Internal Problem. Please restart the server.');
+                Ext.getBody().unmask();
+			}
+		});
+};
+
+function loadAlarmGrid(){
+    //console.log('loadAlarmGrid ... ');
+    if (Ext.getCmp('tabTopo').getActiveTab().title == 'Alarm Dashboard'){
+        var params = getSelectedNode();
+        Ext.getCmp('alarmTab').getStore().reload({
+            params: {nodesArr: params}
+        });
+    }
+}
+
+var runner = new Ext.util.TaskRunner();
+var getTask = runner.newTask({
+    run: function () {
+        getNodesStatus();
+        loadAlarmGrid();
+    },
+    interval: 10000
+});
+
+var test = '';
+
+function prepareSLAList(mseNum){
+
+    var resSlaList = new Array();
+    /*slas.push({sla_name: 'SG0-1-3', sla_id:'1177'});
+    slas.push({sla_name: 'SG0-1-1', sla_id:'1177'});
+    slas.push({sla_name: 'SG0-3-2', sla_id:'1177'});
+    slas.push({sla_name: 'SG0-1-4', sla_id:'1177'});
+    slas.push({sla_name: 'SG0-1-5', sla_id:'1177'});
+*/
+
+    for (i in slas){
+       var splitArr = slas[i].slaName.split("-");
+       if ( (undefined != splitArr) && (splitArr.length > 0)){
+          if ((splitArr[1] == mseNum) || (splitArr[2] == mseNum)){
+              resSlaList.push(slas[i]);
+          }
+       }
+    }
+
+    return resSlaList;
+
+}
+
+function getSLAList(){
+    /*Ext.Ajax.request({
+        url:'getSLAs.htm',
+        method:'POST',
+        success:function (response) {
+            slas = (Ext.decode(response.responseText).data.SLAsList);
+        },
+        failure:function (response) {
+            Ext.Msg.alert('Failed', 'Failed to create ping job.');
+        }
+    });*/
+    slas.push({slaName:'Frame Delay test', slaId:'1232'});
+    slas.push({slaName:'Mesh Sample SG0', slaId:'1233'});
+    slas.push({slaName:'Multicast test', slaId:'1231'});
+    slas.push({slaName:'One Way Performance active test', slaId:'1230'});
+    slas.push({slaName:'SG0-1-3', slaId:'1177'});
+    slas.push({slaName:'SG0-1-4', slaId:'1178'});
+    slas.push({slaName:'SG0-2-3', slaId:'1179'});
+    slas.push({slaName:'SG0-2-4', slaId:'1180'});
+    slas.push({slaName:'SG1-1-3', slaId:'1181'});
+    slas.push({slaName:'SG1-1-4', slaId:'1182'});
+    slas.push({slaName:'SG1-2-3', slaId:'1183'});
+    slas.push({slaName:'SG1-2-4', slaId:'1184'});
+    slas.push({slaName:'SG2-1-3', slaId:'1185'});
+    slas.push({slaName:'SG2-1-4', slaId:'1186'});
+    slas.push({slaName:'SG2-2-3', slaId:'1187'});
+    slas.push({slaName:'SG2-2-4', slaId:'1188'});
+    slas.push({slaName:'SG3-1-3', slaId:'1189'});
+    slas.push({slaName:'SG3-1-4', slaId:'1190'});
+    slas.push({slaName:'SG3-2-3', slaId:'1191'});
+    slas.push({slaName:'SG3-2-4', slaId:'1192'});
+    slas.push({slaName:'SG4-1-3', slaId:'1193'});
+    slas.push({slaName:'SG4-1-4', slaId:'1194'});
+    slas.push({slaName:'SG4-2-3', slaId:'1195'});
+    slas.push({slaName:'SG4-2-4', slaId:'1196'});
+    slas.push({slaName:'SG5-1-3', slaId:'1197'});
+    slas.push({slaName:'SG5-1-4', slaId:'1198'});
+    slas.push({slaName:'SG5-2-3', slaId:'1199'});
+    slas.push({slaName:'SG5-2-4', slaId:'1200'});
+    slas.push({slaName:'SG6-1-3', slaId:'1201'});
+    slas.push({slaName:'SG6-1-4', slaId:'1202'});
+    slas.push({slaName:'SG6-2-3', slaId:'1203'});
+    slas.push({slaName:'SG6-2-4', slaId:'1204'});
+    slas.push({slaName:'SIP Active Test', slaId:'1229'});
+    slas.push({slaName:'UDP BW test', slaId:'1228'});
+
+}
+
+function openSla(name){
+    for(var i in slas){
+        if(slas[i].slaName == name){
+            window.open("http://10.242.53.98:8080/slas/sla_details.html?sla_id=" + slas[i].slaId, "SLA Details");
+            break;
+        }
+    }
+}
+
+function getContextMenu(id) {
+    var slaMenu = new Array();
+    var num = 0;
+    if (id == 'MSE01.CBJ') {
+        num = 3;
+    } else if (id == 'MSE02.CBJ') {
+        num = 4;
+    } else if (id == 'MSE01.PUJ') {
+        num = 1;
+    } else if (id == 'MSE02.PUJ') {
+        num = 2;
+    }
+    var test = prepareSLAList(num);
+    for (var i in test) {
+        slaMenu.push({
+            text:test[i].slaName,
+            iconCls:'icon-app-go',
+            handler:function () {
+                openSla(this.text);
+            }
+        });
+    }
+
+    if (slaMenu.length > 0) {
+        slaMenu.push({
+            text:'UDP BW test',
+            iconCls:'icon-app-go',
+            handler:function () {
+                openSla(this.text);
+            }
+        });
+
+        slaMenu.push({
+            text:'UDP BW API',
+            iconCls:'icon-app-go',
+            handler:function () {
+                actvUdpMdelWin.show();
+            }
+        });
+var contextMenu = new Ext.menu.Menu({
+            items:[
+                {
+                    text:'Ping',
+                    iconCls:'icon-app-go',
+                    handler:function () {
+                        submitPingJob();
+                    }
+                },
+                {
+                    text:'FTP Active Test',
+                    iconCls:'icon-app-go',
+                    handler:function () {
+                        actvMdelWin.show();
+                    }
+                },
+                {
+                    text:'Ping From Brix',
+                    iconCls:'icon-app-go',
+                    handler:function () {
+                        var ip = getIP(path,id );
+                        if(ip == 'NA') {Ext.Msg.alert('Cannot Ping','Ping feature for this node is not available'); return true;}
+                        Ext.getCmp('destIpTxt').setValue(ip);
+                        Ext.getCmp('verifiersCmbBx').setValue('OLTRG-110-PUJ');
+                        actvPingMdelWin.show();
+                    }
+                },
+                {
+                    text:'SLA List',
+                    iconCls:'icon-app-go',
+                    menu:slaMenu
+                }
+            ]
+        });
+    } else {
+        var contextMenu = new Ext.menu.Menu({
+            items:[
+                {
+        text: 'Ping',
+        iconCls: 'icon-app-go',
+                    handler:function () {
+                        submitPingJob();
+                    }
+                },
+                {
+                    text:'FTP Active Test',
+                    iconCls:'icon-app-go',
+                    handler:function () {
+                        actvMdelWin.show();
+                    }
+                },
+                {
+                    text:'Ping From Brix',
+                    iconCls:'icon-app-go',
+                    handler:function () {
+                        var ip = getIP(path, id);
+
+                        //if(ip == 'NA') {Ext.Msg.alert('Cannot Ping','Ping feature for this node is not available'); return true;}
+                        Ext.getCmp('destIpTxt').setValue(ip);
+                        actvPingMdelWin.show();
+                }
+                }
+
+            ]
+});
+    }
+    return contextMenu;
+}
+
+function getIP(path, id) {
+    if (path != undefined) {
+        for (var node_type in path.nodes) {
+            for (var nodes in path.nodes[node_type]) {
+                var node_id = path.nodes[node_type][nodes].node_name,
+                    node_ip = path.nodes[node_type][nodes].node_ip != undefined ? path.nodes[node_type][nodes].node_ip : '';
+
+                if(node_id == id) {
+                    if(node_type == "OLT" || node_type == "IPMSAN") {return '';}
+                    return node_ip;
+                }
+            }
+
+        }
+
+    }
+    return '';
+}
+
+function submitPingJob() {
+    Ext.Ajax.request({
+        url:'insertHPSAPingJob.htm',
+        method:'POST',
+        params:{"subscriberId":Ext.getCmp('txtSubId').getValue(), "deviceIp":test},
+        success:function (response) {
+            if (response.responseText == '-1') {
+                Ext.Msg.alert('Failed', 'Failed');
+            } else {
+                Ext.getBody().mask('Running ping command on ' + test);
+                getPingJobStatus(response.responseText);
+            }
+
+        },
+        failure:function (response) {
+            Ext.Msg.alert('Failed', 'Failed to create ping job.');
+        }
+    });
+}
+
+function doFtpmConnactTest() {
+    Ext.Ajax.request({
+        url:'insertHPSAPingJob.htm',
+        method:'POST',
+        params:{"subscriberId":Ext.getCmp('txtSubId').getValue(), "deviceIp":test},
+        success:function (response) {
+            if (response.responseText == '-1') {
+                Ext.Msg.alert('Failed', 'Failed');
+            } else {
+                Ext.getBody().mask('Running ping command on ' + test);
+                getPingJobStatus(response.responseText);
+            }
+
+        },
+        failure:function (response) {
+            Ext.Msg.alert('Failed', 'Failed to create ping job.');
+        }
+    });
+}
+
+function getPingJobStatus(jobsId){
+    Ext.require([ '*' ]);
+    Ext.Ajax.request({
+        url : 'getPingStatus.htm',
+        method : 'POST',
+        params : {"jobId":jobsId},
+        success : function(response) {
+            var status = Ext.decode(response.responseText).success;
+            if (status){
+                var result = Ext.decode(response.responseText).data;
+                if (result == 'PENDING')
+                    getPingJobStatus(jobsId);
+                else{
+                    //Ext.Msg.alert('Success', Ext.decode(response.responseText).data.result);
+                    Ext.getBody().unmask();
+                    Ext.getCmp('pingResult').setValue(Ext.decode(response.responseText).data.result);
+                    pingWin.show();
+                }
+            }else if (!status){
+                var jsonRespObj = Ext.decode(response.responseText).data;
+                Ext.Msg.alert('Job Failed', 'Job Error' );
+            }
+        },
+        failure : function(response) {
+            alert('FAIL');
+        }
+    });
+}
+
+var pingWin = Ext.widget('window', {
+    title:'Ping',
+    closeAction:'hide',
+    width:450,
+    height:300,
+    layout:'fit',
+    modal:true,
+    items:[{
+        xtype:'textarea',
+        id:'pingResult',
+        value:'',
+        readOnly:true
+    }],
+    buttons:[
+        {
+            text:'Close',
+            handler:function () {
+                pingWin.hide();
+            }
+        }]
+});
+
+var getTopology = function getTopology(subscriberId, _2leg){
+     Ext.Ajax.request({
+			url : 'Topology.htm',
+			method : 'POST',
+			params : {
+                "aSubscriberId": subscriberId,
+                "bSubscriberId": Ext.getCmp('bNumber').getValue(),
+                "isVOBB":_2leg
+            },
+			success : function(response) {
+				linkArray = new Array();
+				var paths = Ext.decode(response.responseText);
+                borderArr = new Array();
+
+                nodeDetailArr = new Array();
+                borderDetailArr = new Array();
+
+                var subscriberDetails = new Array();
+                var secSubscriberDetails = new Array();
+
+				if ((_2leg) && (paths.length != 2)){
+					Ext.Msg.alert('Failed', 'No Data Found for B Subscriber!!! ' + paths.length);
+				}else if ((_2leg) && (paths.length == 2)){
+                    if(!Ext.getCmp('tabTopo').getCollapsed()) Ext.getCmp('tabTopo').toggleCollapse();
+                    portParam = paths[0].port;
+					var jsonRespObjPath = paths[0].path;
+					path = JSON.parse(jsonRespObjPath);
+					
+					var jsonRespObjBorderPath = paths[0].borderPath;
+					borderPath = JSON.parse(jsonRespObjBorderPath);
+                    subscriberDetails.push(paths[0].subscriberId);
+                    subscriberDetails.push(paths[0].serviceName);
+                    subscriberDetails.push(paths[0].port);
+                    subscriberDetails.push(paths[0].serviceType);
+                    subscriberDetails.push(paths[0].service);
+
+					jsonRespObjPath = paths[1].path;
+					vobbPath = JSON.parse(jsonRespObjPath);
+					
+					jsonRespObjBorderPath = paths[1].borderPath;
+					vobbBorderPath = JSON.parse(jsonRespObjBorderPath);
+
+                    secSubscriberDetails.push(paths[1].subscriberId);
+                    secSubscriberDetails.push(paths[1].serviceName);
+                    secSubscriberDetails.push(paths[1].port);
+                    secSubscriberDetails.push(paths[1].serviceType);
+                    secSubscriberDetails.push(paths[1].service);
+				}else if ((!_2leg) && (paths.length == 1)){
+                    portParam = paths[0].port;
+					var jsonRespObjPath = paths[0].path;
+					path = JSON.parse(jsonRespObjPath);
+					
+					var jsonRespObjBorderPath = paths[0].borderPath;
+					borderPath = JSON.parse(jsonRespObjBorderPath);
+
+                    subscriberDetails.push(paths[0].subscriberId);
+                    subscriberDetails.push(paths[0].serviceName);
+                    subscriberDetails.push(paths[0].port);
+                    subscriberDetails.push(paths[0].serviceType);
+                    subscriberDetails.push(paths[0].service);
+				}
+
+                var centralComp = Ext.getCmp('topologyPanel');
+
+                if (!_2leg) {
+                    cw = Ext.create('Ext.draw.Component', {
+                        id:'topo',
+                        viewBox:false,
+                        width:1024,
+                        height:768,
+                        shrinkWrap: true,
+                        items:[ createDataTopo(path, borderPath, false, subscriberDetails) ]
+
+                    });
+
+                } else {
+                    cw = Ext.create('Ext.draw.Component', {
+                        id:'topo',
+                        viewBox:false,
+                        width:1024,
+                        height:768,
+                        items:[ createDataTopo(path, borderPath, false, subscriberDetails), createDataTopo(vobbPath, vobbBorderPath, true, secSubscriberDetails) ]
+
+                    });
+                }
+				centralComp.removeAll();
+
+                centralComp.add(cw);
+                centralComp.autoScroll = true;
+                centralComp.doLayout();
+
+                cw.surface.on('contextmenu',function(e,t,eOpts){
+                    e.preventDefault();
+                    e.stopEvent();
+                });
+
+                cw.surface.getGroup("node_object").each(function (item, id, len) {
+                    item.el.on('contextmenu',function(e,t,eOpts){
+                        e.preventDefault();
+
+
+                        test = getIP(path, t.id);    // TO DO confirm with Thanis : to remove
+                        //if(test == 'NA') {Ext.Msg.alert('Cannot Ping','Ping feature for this node is not available'); return true;}  // TO DO confirm with Thanis : to remove
+                        getContextMenu(t.id).showAt(e.getXY());
+                        e.stopEvent();
+                    });
+                });
+
+                for (var j in nodeDetailArr){
+                    var tip = Ext.create('Ext.tip.ToolTip', nodeDetailArr[j]);
+                }
+				
+				var node_type, nodes;
+				var i = 0;
+
+                if (_2leg){
+                    // add all the elements from the path
+                    for (node_type in vobbPath.nodes){
+                        for (nodes in vobbPath.nodes[node_type]){
+                            var node_name = vobbPath.nodes[node_type][nodes].node_name;
+
+                            arr[i] = new Array(1);
+                            arr[i][0] = node_name;
+                            i++;
+                        }
+                    }
+
+                    // add all the elements from the border path
+                    for (node_type in vobbBorderPath.nodes){
+                        for (nodes in vobbBorderPath.nodes[node_type]){
+                            var node_name = vobbBorderPath.nodes[node_type][nodes].node_name;
+
+                            arr[i] = new Array(1);
+                            arr[i][0] = node_name;
+                            i++;
+                        }
+                    }
+                }
+
+				// add all the elements from the path
+			    for (node_type in path.nodes){
+			 		for (nodes in path.nodes[node_type]){
+			 			var node_name = path.nodes[node_type][nodes].node_name;
+			 				
+			 				arr[i] = new Array(1);
+			 				arr[i][0] = node_name;
+			 				i++;
+			 		}	
+			 	}
+			    
+			    // add all the elements from the border path
+			    for (node_type in borderPath.nodes){
+			 		for (nodes in borderPath.nodes[node_type]){
+			 			var node_name = borderPath.nodes[node_type][nodes].node_name;
+			 				
+			 				arr[i] = new Array(1);
+			 				arr[i][0] = node_name;
+			 				i++;
+			 		}	
+			 	}
+
+			  getNodesStatus(); // initial invocation of getNodeStatus Task
+              getTask.start();
+			   
+			  selectedNode = undefined;
+			  
+			  loadAlarmGrid(); // initial loading of alarm grid
+		
+			  // get the data for the network KPI by passing the linkArray to identify the source and destination
+          	  selectNetworkKPI();
+
+              getSLAList();
+			},
+
+			failure : function(response) {
+				alert('Failed due to Internal Problem. Please restart the server.');
+			}
+
+		});
+};
+
+function stopAllTask(){
+    getTask.stop();
+}
+
+function toggleVOBBFields(currService) {
+    if (currService != 'VOBB') {
+        Ext.getCmp('bNumber').hide();
+        Ext.getCmp('searchBtn').hide();
+        Ext.getCmp('resetBtn').hide();
+        Ext.getCmp('getCallIdsBtn').hide();
+        Ext.getCmp('getPolyCallIdsBtn').hide();
+    } else {
+        Ext.getCmp('bNumber').show();
+        Ext.getCmp('searchBtn').show();
+        Ext.getCmp('resetBtn').show();
+        Ext.getCmp('getCallIdsBtn').show();
+        Ext.getCmp('getPolyCallIdsBtn').show();
+    }
+}
+
+

@@ -1,0 +1,115 @@
+package com.hp.temip.alb_gui.controller;
+
+import com.hp.temip.alb_gui.domain.AlbHostGridObject;
+import com.hp.temip.alb_gui.service.AlbHostService;
+import com.hp.temip.alb_gui.service.UserAccessAuditService;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.HashMap;
+import java.util.List;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 10/3/12
+ * Time: 1:17 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Controller
+public class AlbHostController {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    private AlbHostService service;
+
+    private UserAccessAuditService userAccessAuditService;
+
+    @Autowired
+    public void setService(AlbHostService service) {
+        this.service = service;
+    }
+
+    @Autowired
+    public void setUserAccessAuditService(UserAccessAuditService service) {
+        this.userAccessAuditService = service;
+    }
+
+    @RequestMapping(value = "/getHostList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getHostList() {
+        List<AlbHostGridObject> albHostGridObjects = service.getHostList();
+
+        HashMap<String, List<AlbHostGridObject>> modelMap = new HashMap<String, List<AlbHostGridObject>>();
+        modelMap.put("hosts", albHostGridObjects);
+        logger.debug(albHostGridObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "updateHosts.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> updateHosts(@RequestParam String dataArray) {
+        String result = "{success:true}";
+
+        try {
+
+            JSONArray jsonMainArr = new JSONObject(dataArray).getJSONArray("hosts");
+
+            logger.info("JSON Array: " + jsonMainArr.toString());
+            for (int i = 0; i < jsonMainArr.length(); i++) {
+                JSONObject childJSONObject = jsonMainArr.getJSONObject(i);
+
+                AlbHostGridObject albHostGridObject = new AlbHostGridObject();
+                albHostGridObject.setHostId(Integer.valueOf(childJSONObject.getString("hostId")));
+                albHostGridObject.setHostName(childJSONObject.getString("hostName"));
+                albHostGridObject.setHostIP(childJSONObject.getString("hostIP"));
+
+                logger.debug("Updating Hosts: " + albHostGridObject.toString());
+                service.updateHosts(albHostGridObject);
+            }
+            userAccessAuditService.insertAudit("HOST:UPDATE");
+            return new ResponseEntity<String>(result, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            result = "{success:false}";
+            return new ResponseEntity<String>(result, HttpStatus.OK);
+        }
+    }
+
+    @RequestMapping(value = "insertNewHost.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertNewHost(@RequestParam String hostName, @RequestParam String hostIP) {
+        String result;
+        try {
+
+            if (null == hostName || null == hostIP) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+            
+            AlbHostGridObject albHostGridObject = new AlbHostGridObject();
+            albHostGridObject.setHostName(hostName);
+            albHostGridObject.setHostIP(hostIP);
+
+            logger.debug("Inserting Host: " + albHostGridObject.toString());
+            service.insertNewHost(albHostGridObject);
+            result = "{success:true}";
+        } catch (Exception e) {
+            e.printStackTrace();
+            result = "{success:false}";
+        }
+
+        userAccessAuditService.insertAudit("HOST:NEW");
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+    }
+}

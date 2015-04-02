@@ -1,0 +1,371 @@
+function getPolystarCallIds() {
+    var form = Ext.getCmp('poly-call-Ids-form').getForm();
+    if (form.isValid()) {
+        form.submit({
+            success:function (form, action) {
+                polyModelCallIdsWin.close();
+                polyCallIdsGridTab.store.loadData(Ext.decode(action.response.responseText).data.polystarCallIdList, false);
+                polyCallIdsGridTab.store.sort('callId', 'DESC');
+                topoTabPanel.setActiveTab(5);
+                if(Ext.getCmp('tabTopo').getCollapsed()) Ext.getCmp('tabTopo').toggleCollapse();
+            },
+            failure:function (form, action) {
+                var jsonRespObj = Ext.decode(action.response.responseText).data;
+                Ext.Msg.alert('Job Failed', jsonRespObj.errCode + "<br>" + jsonRespObj.errMsg );
+            }
+        });
+    }
+}
+
+function insertPolystarCallKPIJob(callId,startDateTime,endDateTime) {
+    Ext.Ajax.request({
+        url : 'insertPolystarCallKPIJob.htm',
+        method : 'POST',
+        params : {"callId":callId, "startDateTime":startDateTime,"endDateTime":endDateTime,"subscriberId":Ext.getCmp('servicesCombo').getValue()},
+        success : function(response) {
+            Ext.getCmp('poly-modelCallerIdsPBWin').show();
+            getPolystarCallKPI(Ext.decode(response.responseText).data.jobId);
+        },
+        failure : function(response) {
+            Ext.Msg.alert('Job Failed', 'Caught internal error. Please check the logs for details.' );
+        }
+    });
+}
+
+function getPolystarCallKPI(jobsId){
+    Ext.require([ '*' ]);
+    Ext.Ajax.request({
+        url : 'getPolystarCallKPI.htm',
+        method : 'POST',
+        params : {"jobId":jobsId},
+        success : function(response) {
+            var status = Ext.decode(response.responseText).success;
+            if (status){
+                var result = Ext.decode(response.responseText).data.status;
+                if (result == 'PENDING')
+                    getPolystarCallKPI(jobsId);
+                else  if (result == 'SUCCESS'){
+                    Ext.getCmp('poly-modelCallerIdsPBWin').close();
+                    polyModelCallIdsWin.close();
+                }
+            }else if (!status){
+                var jsonRespObj = Ext.decode(response.responseText).data;
+                Ext.getCmp('poly-modelCallerIdsPBWin').close();
+                Ext.Msg.alert('Job Failed', jsonRespObj.errCode + "<br>" + jsonRespObj.errMsg );
+            }
+        },
+        failure : function(response) {
+            Ext.Msg.alert('Job Failed', 'Caught internal error. Please check the logs for details.' );
+        }
+    });
+}
+
+var polyCallIdsFormPanel = {
+    xtype:'form',
+    height:250,
+    id:'poly-call-Ids-form',
+    url:'getPolystarCallIds.htm',
+    layout:'form',
+    frame:true,
+    bodyPadding:10,
+    defaults:{
+        anchor:'100%',
+        labelWidth:150
+    },
+    items       : [
+        {
+            xtype       : 'datefield',
+            id          :'startDateTfd',
+            anchor      : '100%',
+            fieldLabel  : 'Start Date',
+            name        : 'startDate',
+            format      : 'Y-m-d',
+            minValue    : '2012-10-22',
+            maxValue    : '2012-10-24',
+            maskRe      : /[0-9\/]/,
+            value       : '2012-10-22'
+        },{
+            xtype       : 'timefield',
+            id          :'startTimeTfd',
+            format      : 'H:i:s',
+            name        : 'startTime',
+            fieldLabel  : 'Start Time',
+            increment   : 15,
+            anchor      : '100%',
+            value       : '00:00:00',
+            allowBlank: false
+        },{
+            xtype       : 'timefield',
+            id          :'endTimeTfd',
+            format      : 'H:i:s',
+            name        : 'endTime',
+            fieldLabel  : 'End Time',
+            increment   : 15,
+            anchor      : '100%',
+            value       : '23:59:59' ,
+            allowBlank: false
+        },{
+            xtype       : 'textfield',
+            fieldLabel  : 'Source Number',
+            id          : 'aNum-Txt',
+            name        : 'aNum',
+            allowBlank: false
+        },{
+            xtype       : 'textfield',
+            fieldLabel  : 'Destination Number',
+            id          : 'bNum-Txt',
+            name        : 'bNum',
+            allowBlank: false
+        }
+    ],
+    buttons: [{
+        text: 'Reset',
+        handler: function() {
+            this.up('form').getForm().reset();
+        }
+    }, {
+        id:'searchPolyCallIdsBtn',
+        text: 'Submit',
+        formBind: true,
+        disabled: true,
+        handler: getPolystarCallIds
+    }],
+    listeners: {
+        afterRender: function(thisForm, options){
+            this.keyNav = Ext.create('Ext.util.KeyNav', this.el, {
+                enter: getPolystarCallIds,
+                scope: this
+            });
+        }
+    }
+};
+
+var polyModelCallIdsWin = Ext.widget('window', {
+    title:'Fetch Call Id List',
+    id:'poly-callids-win',
+    closeAction:'hide',
+    width:350,
+    layout:'fit',
+    modal:true,
+    items:[polyCallIdsFormPanel]
+});
+
+var polyCallerIdsPgbar = Ext.create('Ext.ProgressBar', {
+    id    : 'poly-callerIdsPgbar',
+    width : 300,
+    height:10
+});
+polyCallerIdsPgbar.wait({
+    interval: 500,
+    increment: 15,
+    text: 'fetching...',
+    scope: this
+});
+
+
+var polyModelCallerIdsPBWin  = Ext.widget('window', {
+    id : 'poly-modelCallerIdsPBWin',
+    title: 'Please wait ...  ',
+    closeAction: 'hide',
+    width: 400,
+    layout: 'fit',
+    resizable: true,
+    modal: false,
+    items  : [polyCallerIdsPgbar]
+});
+
+Ext.define('CallIdsGridModel', {
+    extend: 'Ext.data.Model',
+    fields: [
+        {name: 'callId', type: 'string'},
+        {name: 'aNumber', type: 'string'},
+        {name: 'bNumber', type:'string' },
+        {name: 'startDate', type:'string' },
+        {name: 'endDate', type:'string' },
+        {name: 'duration', type:'string' },
+        {name: 'status', type:'string' }
+    ]
+});
+
+var polyCallIdsGridStore = Ext.create('Ext.data.Store', {
+    id: 'callIdsGrid-store',
+    autoLoad: false,
+    model: 'CallIdsGridModel',
+    proxy: {
+        type: 'memory',
+        reader: {
+            type: 'json',
+            root: 'CallIdsList'
+        }
+    }
+});
+
+var polyCallIdsGridTab = Ext.create('Ext.grid.Panel', {
+    id:'poly-callIdsGrid-panel',
+    iconCls:'icon-grid',
+    store: polyCallIdsGridStore,
+    columns: [
+        {text: "Call Id", flex:1, sortable: true, dataIndex: 'callId'},
+        {text: "A Number", flex:1, sortable: true, dataIndex: 'aNumber'},
+        {text: "B Number", flex:1, sortable: true, dataIndex: 'bNumber'},
+        {text: "Start Date Time", flex:1, sortable: true, dataIndex: 'startDate'},
+        {text: "End Date Time", flex:1, sortable: true, dataIndex: 'endDate'},
+        {text: "Duration (s)", flex:1, sortable: true, dataIndex: 'duration'},
+        {text: "Status", flex:1, sortable: true, dataIndex: 'status'},
+        { xtype:'actioncolumn', sortable:false, text:"Osix Call Trace",
+            items:[
+                {
+                    icon:'images/application_go.png',
+                    tooltip:'Launch Osix Call Trace',
+                    handler:function (grid, rowIndex, colIndex) {
+                        var rec = grid.getStore().getAt(rowIndex);
+                        var callId = rec.get('callId');
+                        var startDateTime = rec.get('startDate');
+                        var endDateTime = rec.get('endDate');
+                        insertPolystarCallKPIJob(callId,startDateTime,endDateTime);
+                    }
+                }
+            ]},
+        { xtype:'actioncolumn', sortable:false, text:"View Call KPI",
+            items:[
+                {
+                    icon:'images/application_go.png',
+                    tooltip:'Get call KPI info from Polystar',
+                    handler:function (grid, rowIndex, colIndex) {
+                        var rec = grid.getStore().getAt(rowIndex);
+                        var callId = rec.get('callId');
+                        var startDateTime = rec.get('startDate');
+                        getPolyCallKPI(callId,startDateTime);
+                    }
+                }
+            ]}
+    ],
+    columnLines:true,
+    collapsible:false,
+    title:'Polystar - Call ID List',
+    autoScroll:true
+});
+
+function getPolyCallKPI(callId,startDateTime){
+    Ext.require([ '*' ]);
+    Ext.Ajax.request({
+        url : 'getPolyCallKPI.htm',
+        method : 'POST',
+        params : {"callId":callId, "startDate":startDateTime},
+        success : function(response) {
+                    var fwdList = Ext.decode(response.responseText).data.fwdKpiList;
+                    var revList = Ext.decode(response.responseText).data.revKpiList;
+            var othList = Ext.decode(response.responseText).data.othKpiList;
+            updatePolyCallKpi(fwdList,revList,othList, is2leg);
+        },
+        failure : function(response) {
+            var jsonRespObj = Ext.decode(action.response.responseText).data;
+            Ext.Msg.alert('Job Failed', jsonRespObj.errCode + "<br>" + jsonRespObj.errMsg );
+        }
+    });
+}
+
+function updatePolyCallKpi(fwdList,revlist,othList, is2Leg) {
+
+    if(!is2Leg) {
+        kpi_x2 = 840;
+        kpi_y2 = 430;
+    }
+
+    var drawSprites = [];
+    var node, textNode;
+    var y3 = (kpi_y1 + kpi_y2)/2;
+    var y4 = y3 + 110;
+    // Remove existing sprite object from Surface
+    cw.surface.getGroup("call_kpi_text_object").each(function (item, id, len) {
+        cw.surface.remove(item, true);
+    });
+
+    for (idx in fwdList){
+        textNode = {
+            type:"text",
+            text:fwdList[idx],
+            x:kpi_x1  + 60,
+            y:y3+(idx*15),
+            'text-anchor':"left",
+            font:"12px century gothic",
+            "group":'call_kpi_text_object'
+        };
+        drawSprites.push(textNode);
+    }
+
+    for (idx in revlist){
+        textNode = {
+            type:"text",
+            text:revlist[idx],
+            x:kpi_x1 - 120,
+            y:y4-(idx*15),
+            'text-anchor':"left",
+            font:"12px century gothic",
+            "group":'call_kpi_text_object'
+        };
+        drawSprites.push(textNode);
+    }
+
+    for (idx in othList){
+        textNode = {
+            type:"text",
+            text:othList[idx],
+            x:kpi_x1,
+            y:kpi_y1-60+(idx*15),
+            'text-anchor':"left",
+            font:"12px century gothic",
+            "group":'call_kpi_text_object'
+        };
+        drawSprites.push(textNode);
+    }
+
+    drawSprites.push({
+        id:'cloud_arrow',
+        width:130,
+        height:270,
+        x:kpi_x2-20,
+        y:kpi_y2-280,
+        type: "image",
+        src: 'images/cloud-with-arrow-1.png',
+        "group":'call_kpi_text_object'
+    });
+
+
+    if(!is2Leg){
+        drawSprites.push({
+            id:'new_node',
+            type:'rect',
+            width:80,
+            height:40,
+            x:kpi_x2,
+            y:kpi_y2,
+            radius:1,
+            fill:'#ffffff',
+            stroke:'#000',
+            "fill-opacity":100,
+            'stroke-width':1,
+            cursor:"hand",
+            group:'call_kpi_text_object'
+        });
+
+        drawSprites.push({
+            type:"text",
+            text:Ext.getCmp('bNumber').getValue(),
+            x:(kpi_x2+40),
+            y:(kpi_y2+20),
+            'text-anchor':"middle",
+            font:"10px century gothic",
+            "group":'call_kpi_text_object'
+        });
+    }
+
+
+    for (i in drawSprites){
+        var sprite = Ext.create('Ext.draw.Sprite', drawSprites[i]);
+        cw.surface.add(sprite).show(true);
+    }
+
+}
+
+

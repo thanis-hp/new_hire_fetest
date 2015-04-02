@@ -1,0 +1,213 @@
+var verifiersStore = Ext.create('Ext.data.Store', {
+    fields: ['abbr', 'name'],
+    data : [
+        {"abbr":"IGW-100M-PUJ", "name":"IGW-100M-PUJ"},
+        {"abbr":"IPTV-100M-PUJ", "name":"IPTV-100M-PUJ"},
+        {"abbr":"MSANMODEM-10-PUJ", "name":"MSANMODEM-10-PUJ"},
+        {"abbr":"MSANMODEM-100M-PUJ", "name":"MSANMODEM-100M-PUJ"},
+        {"abbr":"MSANRG-10-PUJ", "name":"MSANRG-10-PUJ"},
+        {"abbr":"NPE-100M-PUJ", "name":"NPE-100M-PUJ"},
+        {"abbr":"OLTONU-10-PUJ", "name":"OLTONU-10-PUJ"},
+        {"abbr":"OLTONU-100M-PUJ", "name":"OLTONU-100M-PUJ"},
+        {"abbr":"OLTRG-110-PUJ", "name":"OLTRG-110-PUJ"},
+        {"abbr":"TRU310-CBJ", "name":"TRU310-CBJ"},
+        {"abbr":"TM1LAB-3000-PUJ", "name":"TM1LAB-3000-PUJ"},
+        {"abbr":"TMRD-3000-CBJ", "name":"TMRD-3000-CBJ"},
+        {"abbr":"VOICE-100M-CBJ", "name":"VOICE-100M-CBJ"}
+    ]
+});
+
+var activePingFormPanel = {
+    xtype:'form',
+    height:100,
+    id:'actv-ping-form',
+    url:'insertActivePingJob.htm',
+    layout:'form',
+    frame:true,
+    bodyPadding:10,
+    defaults:{
+        anchor:'100%',
+        labelWidth:150
+    },
+    items       : [
+        {
+            xtype       : 'combobox',
+            name        : 'verifiersCmbBx',
+            id          : 'verifiersCmbBx',
+            fieldLabel  : 'Choose Verifier',
+            store       :  verifiersStore,
+            queryMode   : 'local',
+            displayField: 'name',
+            valueField  : 'abbr'
+        } ,
+        {
+            xtype       : 'textfield',
+            id          : 'destIpTxt',
+            anchor      : '100%',
+            fieldLabel  : 'Destination Ip',
+            name        : 'destIpTxt'
+        },
+        {
+            xtype       : 'textfield',
+            id          : 'timeoutTxt',
+            anchor      : '100%',
+            fieldLabel  : 'Time Out(in seconds)',
+            name        : 'timeoutTxt',
+            value       : '100'
+        },
+        {
+            xtype       : 'hidden',
+            id          : 'subsIdTxt',
+            anchor      : '100%',
+            name        : 'subsIdTxt'
+        }
+    ],
+    buttons: [{
+        text: 'Reset',
+        handler: function() {
+            this.up('form').getForm().reset();
+        }
+    }, {
+        id:'insertActivePingJobBtn',
+        text: 'Submit',
+        formBind: true,
+        disabled: true,
+        handler: insertActivePingJobBtn
+    }],
+    listeners: {
+        afterRender: function(thisForm, options){
+            this.keyNav = Ext.create('Ext.util.KeyNav', this.el, {
+                enter: insertActivePingJobBtn,
+                scope: this
+            });
+        }
+    }
+};
+
+var actvPingMdelWin = Ext.widget('window', {
+    title:'Active Ping Test - Filter',
+    id:'actvPingMdel-win',
+    closeAction:'hide',
+    width:400,
+    layout:'fit',
+    modal:true,
+    items:[activePingFormPanel]
+});
+
+var actvPingPgbar = Ext.create('Ext.ProgressBar', {
+    id    : 'actvPingPgbar',
+    width : 300,
+    height:10
+});
+actvPingPgbar.wait({
+    interval: 500,
+    increment: 15,
+    text: 'loading...',
+    scope: this
+});
+
+
+var activPingPBWin  = Ext.widget('window', {
+    id : 'activPingPBWin',
+    title: 'Please wait ...  ',
+    closeAction: 'hide',
+    width: 400,
+    layout: 'fit',
+    resizable: true,
+    modal: false,
+    items  : [actvPingPgbar]
+});
+
+function insertActivePingJobBtn() {
+    var form = Ext.getCmp('actv-ping-form').getForm();
+    if (form.isValid()) {
+        Ext.getCmp('subsIdTxt').setValue(Ext.getCmp('servicesCombo').getValue());
+        form.submit({
+            success:function (form, action) {
+                actvPingMdelWin.close();
+                Ext.getCmp('activPingPBWin').show();
+                getActivePingResponse(Ext.decode(action.response.responseText).data.jobId);
+            },
+            failure:function (form, action) {
+                Ext.Msg.alert('Job Failed', 'Caught internal error. Please check the logs for details.' );
+            }
+        });
+    }
+}
+
+function getActivePingResponse(jobsId){
+    Ext.require([ '*' ]);
+    Ext.Ajax.request({
+        url : 'getActivePingResponse.htm',
+        method : 'POST',
+        params : {"jobId":jobsId},
+        success : function(response) {
+            var status = Ext.decode(response.responseText).success;
+            if (status){
+                var result = Ext.decode(response.responseText).data.status;
+                if (result == 'PENDING')
+                    getActivePingResponse(jobsId);
+                else  if (result == 'SUCCESS'){
+                    Ext.getCmp('activPingPBWin').close();
+                    actvPingRespMdelWin.show();
+                    pingGridTab.store.loadData(Ext.decode(response.responseText).data.resList, false);
+                    //pingGridTab.store.sort('name', 'ASC');
+                }
+            }else if (!status){
+                modelCallIdsWin.close();
+                var jsonRespObj = Ext.decode(response.responseText).data;
+                Ext.getCmp('activPingPBWin').close();
+                Ext.Msg.alert('Job Failed', jsonRespObj.errCode + "<br>" + jsonRespObj.errMsg );
+            }
+        },
+        failure : function(response) {
+            Ext.Msg.alert('Job Failed', 'Caught internal error. Please check the logs for details.' );
+        }
+    });
+}
+
+Ext.define('pingGridModel', {
+    extend: 'Ext.data.Model',
+    fields: [
+        {name: 'name',    type: 'string'},
+        {name: 'value',    type: 'string'}
+    ]
+});
+
+var pingGridStore = Ext.create('Ext.data.Store', {
+    id: 'pingGrid-store',
+    autoLoad: false,
+    model: 'pingGridModel',
+    proxy: {
+        type: 'memory',
+        reader: {
+            type: 'json',
+            root: 'resList'
+        }
+    }
+});
+
+var pingGridTab = Ext.create('Ext.grid.Panel', {
+    id:'pingGrid-panel',
+    iconCls:'icon-grid',
+    store: pingGridStore,
+    columns: [
+        {text: "KPI", flex:1, sortable: true, dataIndex: 'name'},
+        {text: "Value", flex:1, sortable: true, dataIndex: 'value'}
+    ],
+    columnLines:true,
+    collapsible:false,
+    title:'Ping Active Results',
+    autoScroll:true
+});
+
+var actvPingRespMdelWin = Ext.widget('window', {
+    title:'Active Ping Test - Response',
+    id:'actvPingRespMdel-win',
+    closeAction:'hide',
+    width:400,
+    layout:'fit',
+    modal:true,
+    items:[pingGridTab]
+});
+

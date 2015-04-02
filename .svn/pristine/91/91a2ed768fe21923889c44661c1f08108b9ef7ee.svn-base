@@ -1,0 +1,94 @@
+package com.hp.temip.alb_gui.controller;
+
+import com.hp.temip.alb_gui.domain.ProfileGridObject;
+import com.hp.temip.alb_gui.domain.UserGridObject;
+import com.hp.temip.alb_gui.service.ProfileService;
+import com.hp.temip.alb_gui.service.UserService;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 8/27/13
+ * Time: 4:47 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Controller
+public class ProfileController {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    private ProfileService service;
+
+    @Autowired
+    public void setService(ProfileService service) {
+        this.service = service;
+    }
+
+
+
+    @RequestMapping(value = "/getProfileList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getUserList() {
+        List<ProfileGridObject> profileList = service.getProfileList();
+
+        HashMap<String, List<ProfileGridObject>> modelMap = new HashMap<String, List<ProfileGridObject>>();
+        modelMap.put("profiles", profileList);
+        logger.info(profileList);
+        return modelMap;
+    }
+
+
+    @RequestMapping(value = "insertNewProfile.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertNewProfile(@RequestParam String profileId) {
+        String result = "{success:true}";
+        try {
+
+            if (null == profileId) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+
+            ProfileGridObject profileGridObject = new ProfileGridObject();
+            profileGridObject.setProfileId(profileId);
+            profileGridObject.setTranslateStatus("Pending");
+            profileGridObject.setDeployStatus("Pending");
+
+            SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            String today = sf.format(new Date());
+            logger.debug("today is:"+today);
+
+
+            profileGridObject.setDateCreated(today);
+            profileGridObject.setDateModified(today);
+
+            logger.info("Inserting Profile: " + profileGridObject.toString());
+            service.insertNewUser(profileGridObject);
+
+            result = "{success:true}";
+        } catch (Exception e) {
+            e.printStackTrace();
+            result = "{success:false}";
+        }
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+
+
+    }
+
+
+}

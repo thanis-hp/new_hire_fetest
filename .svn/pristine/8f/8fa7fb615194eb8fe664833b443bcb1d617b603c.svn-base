@@ -1,0 +1,12 @@
+driver=oracle.jdbc.driver.OracleDriver
+
+#Development URL
+#url=jdbc:oracle:thin:@localhost:1521:xe
+#url=jdbc:oracle:thin:@10.242.43.234:1521:orcl
+#url=jdbc:oracle:thin:@16.153.46.198:1521:orcl
+
+##Production URL
+url=jdbc:oracle:thin:@localhost:1521:orcl
+
+username=owd_db
+password=password123

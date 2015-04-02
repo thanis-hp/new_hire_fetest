@@ -1,0 +1,24 @@
+package com.hp.temip.alb_gui.dao;
+
+import com.hp.temip.alb_gui.domain.AlarmGridObject;
+
+import java.util.List;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 8/16/12
+ * Time: 12:07 PM
+ * To change this template use File | Settings | File Templates.
+ */
+public interface SampleAlarmMapper {
+
+    public List<AlarmGridObject> getAlarmList();
+
+    int insertNewAlarm(AlarmGridObject alarmGridObject);
+
+    int updateAlarm(AlarmGridObject alarmGridObject);
+
+    int removeSampleAlarm(AlarmGridObject alarmGridObject);
+
+}

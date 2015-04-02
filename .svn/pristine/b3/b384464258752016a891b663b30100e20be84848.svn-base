@@ -1,0 +1,23 @@
+package com.hp.temip.alb_gui.dao;
+
+import com.hp.temip.alb_gui.domain.ProfileGridObject;
+
+import java.util.List;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 8/27/13
+ * Time: 11:30 AM
+ * To change this template use File | Settings | File Templates.
+ */
+public interface ProfileMapper {
+
+
+    public List<ProfileGridObject> getProfileList();
+
+    public int updateProfile(ProfileGridObject userGridObject);
+
+    public int insertNewProfile(ProfileGridObject userGridObject);
+
+}

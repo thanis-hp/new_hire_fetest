@@ -1,0 +1,317 @@
+package com.hp.temip.alb_gui.util;
+
+import au.com.bytecode.opencsv.CSVWriter;
+import com.hp.temip.alb_gui.domain.AlarmIdentifierGridObject;
+import com.hp.temip.alb_gui.domain.ParameterExtractGridObject;
+import com.hp.temip.alb_gui.domain.ProfileGridObject;
+import com.hp.temip.alb_gui.domain.SelectionControlGridObject;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.util.List;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 9/11/13
+ * Time: 4:44 PM
+ * To change this template use File | Settings | File Templates.
+ */
+public class FileMaker {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    public static String PROFILE_SUFFIX = "_profiletable.csv";
+    public static String SELECTION_CONTROL_SUFFIX = "_selectioncontrol.csv";
+    private static String PARAMETER_EXTRACTION_SUFFIX = "_parameterextraction.csv";
+    private static String ALARM_IDENTIFIER_SUFFIX = "_alarmidentifier.csv";
+    private static String CUSTOM_FIELDS = "custom_fields.csv";
+
+    private static String PROFILE_FILE_HEADER1 = "Profile for Alarm Processing";
+    private static String PROFILE_FILE_HEADER2 = "Control File for Parameter Extraction";
+    private static String PROFILE_FILE_HEADER3 = "Control File for Alarm Identifier Dependent Processing";
+    private static String PROFILE_FILE_HEADER4 = "Custom Fields";
+
+    private static String SELECTION_CONTROL_FILE_HEADER1 = "Access Module";
+    private static String SELECTION_CONTROL_FILE_HEADER2 = "Global Class";
+    private static String SELECTION_CONTROL_FILE_HEADER3 = "Domains";
+    private static String SELECTION_CONTROL_FILE_HEADER4 = "Node Name";
+    private static String SELECTION_CONTROL_FILE_HEADER5 = "Subclass";
+    private static String SELECTION_CONTROL_FILE_HEADER6 = "Original Alarm Remain";
+    private static String SELECTION_CONTROL_FILE_HEADER7 = "Profile";
+    private static String SELECTION_CONTROL_FILE_HEADER8 = "Managed Object Discriminator";
+
+    private static String PARAMETER_FILE_HEADER1 = "Target Alarm Parameter";
+    private static String PARAMETER_FILE_HEADER2 = "Source Alarm Parameter";
+    private static String PARAMETER_FILE_HEADER3 = "Keyword";
+    private static String PARAMETER_FILE_HEADER4 = "Extract after Keyword";
+    private static String PARAMETER_FILE_HEADER5 = "Post-processing";
+
+    private static String ALARM_FILE_HEADER1 = "Event-ID";
+    private static String ALARM_FILE_HEADER2 = "Variables";
+    private static String ALARM_FILE_HEADER3 = "Show Alarm";
+    private static String ALARM_FILE_HEADER4 = "Database table";
+    private static String ALARM_FILE_HEADER5 = "Database access";
+    private static String ALARM_FILE_HEADER6 = "Table columns";
+    private static String ALARM_FILE_HEADER7 = "Additional Text";
+    private static String ALARM_FILE_HEADER8 = "Probable Cause";
+    private static String ALARM_FILE_HEADER9 = "Perceived Severity";
+    private static String ALARM_FILE_HEADER10 = "Alarm Type";
+    private static String ALARM_FILE_HEADER11 = "usertext";
+    private static String ALARM_FILE_HEADER12 = "Label1";
+    private static String ALARM_FILE_HEADER13 = "Label2";
+    private static String ALARM_FILE_HEADER14 = "Label3";
+    private static String ALARM_FILE_HEADER15 = "Label4";
+    private static String ALARM_FILE_HEADER16 = "Label5";
+    private static String ALARM_FILE_HEADER17 = "Label6";
+    private static String ALARM_FILE_HEADER18 = "Label7";
+    private static String ALARM_FILE_HEADER19 = "Label8";
+    private static String ALARM_FILE_HEADER20 = "Label9";
+    private static String ALARM_FILE_HEADER21 = "Label10";
+
+    private static String CUSTOM_FIELD_LINE1 = "Custom Field Name,Custom Field ID,Custom Field Type";
+    private static String CUSTOM_FIELD_LINE2 = "usertext,9873,Latin1String";
+    private static String CUSTOM_FIELD_LINE3 = "Label1,10004,Latin1String";
+    private static String CUSTOM_FIELD_LINE4 = "Label2,10005,Latin1String";
+    private static String CUSTOM_FIELD_LINE5 = "Label3,10006,Latin1String";
+    private static String CUSTOM_FIELD_LINE6 = "Label4,10007,Latin1String";
+    private static String CUSTOM_FIELD_LINE7 = "Label5,10008,Latin1String";
+    private static String CUSTOM_FIELD_LINE8 = "Label6,10009,Latin1String";
+    private static String CUSTOM_FIELD_LINE9 = "Label7,10010,Latin1String";
+    private static String CUSTOM_FIELD_LINE10 = "Label8,10011,Latin1String";
+    private static String CUSTOM_FIELD_LINE11 = "Label9,10012,Latin1String";
+    private static String CUSTOM_FIELD_LINE12 = "Label10,10013,Latin1String";
+
+
+
+
+
+    /**
+     *
+     * @param outputDirectory
+     * @param profile
+     * @param selectionControlGridObjects
+     * @param parameterExtractGridObjects
+     * @param alarmIdentifierGridObjects
+     * @return 0 - success
+     *          -1 - failure
+     */
+    public static synchronized int generateFiles(String outputDirectory, ProfileGridObject profile, List<SelectionControlGridObject> selectionControlGridObjects,
+                             List<ParameterExtractGridObject> parameterExtractGridObjects, List<AlarmIdentifierGridObject> alarmIdentifierGridObjects){
+
+        //create a directory if it does not exist
+        String directory = outputDirectory+File.separator+profile.getProfileId();
+        File f = new File(directory);
+        try{
+            if(!f.exists()){                                                
+                f.mkdir();
+            }
+        } catch(SecurityException se){
+            se.printStackTrace();
+            return -1;
+        }
+
+        try{
+            //Profile file
+            CSVWriter profileWriter = new CSVWriter(new FileWriter(directory+File.separator+profile.getProfileId()+PROFILE_SUFFIX),',');
+
+            //header first
+            String[] profileEntries = new String[4];
+            profileEntries[0] = PROFILE_FILE_HEADER1;
+            profileEntries[1] = PROFILE_FILE_HEADER2;
+            profileEntries[2] = PROFILE_FILE_HEADER3;
+            profileEntries[3] = PROFILE_FILE_HEADER4;
+            profileWriter.writeNext(profileEntries);
+
+            //actual row!
+            profileEntries[0] = profile.getProfileId();
+            profileEntries[1] = profile.getControlFileParameterExtraction();
+            profileEntries[2] = profile.getControlFileAlarmIdentifier();
+            profileEntries[3] = profile.getCustomFields();
+
+            profileWriter.writeNext(profileEntries);
+            profileWriter.close();
+
+
+            //selection control
+            CSVWriter selectionWriter = new CSVWriter(new FileWriter(directory+File.separator+profile.getProfileId()+SELECTION_CONTROL_SUFFIX),',');
+
+            //header first
+            String[] selectionEntries = new String[8];
+            selectionEntries[0] = SELECTION_CONTROL_FILE_HEADER1;
+            selectionEntries[1] = SELECTION_CONTROL_FILE_HEADER2;
+            selectionEntries[2] = SELECTION_CONTROL_FILE_HEADER3;
+            selectionEntries[3] = SELECTION_CONTROL_FILE_HEADER4;
+            selectionEntries[4] = SELECTION_CONTROL_FILE_HEADER5;
+            selectionEntries[5] = SELECTION_CONTROL_FILE_HEADER6;
+            selectionEntries[6] = SELECTION_CONTROL_FILE_HEADER7;
+            selectionEntries[7] = SELECTION_CONTROL_FILE_HEADER8;
+            selectionWriter.writeNext(selectionEntries);
+
+            SelectionControlGridObject selectionControlGridObject = selectionControlGridObjects.get(0);
+            //actual row!
+            selectionEntries[0] = selectionControlGridObject.getAccessModule();
+            selectionEntries[1] = selectionControlGridObject.getGlobalClass();
+            selectionEntries[2] = selectionControlGridObject.getDomains();
+            selectionEntries[3] = selectionControlGridObject.getNodeName();
+            selectionEntries[4] = selectionControlGridObject.getSubclass();
+            selectionEntries[5] = selectionControlGridObject.getOriginalAlarmRemain();
+            selectionEntries[6] = selectionControlGridObject.getProfileId();
+            selectionEntries[7] = selectionControlGridObject.getManagedObjectDiscriminator();
+
+            selectionWriter.writeNext(selectionEntries);
+            selectionWriter.close();
+
+
+
+            //parameter extraction
+            CSVWriter parameterWriter = new CSVWriter(new FileWriter(directory+File.separator+profile.getProfileId()+PARAMETER_EXTRACTION_SUFFIX),',');
+            // feed in your array (or convert your data to an array)
+            //header first
+            String[] parameterEntries = new String[5];
+            parameterEntries[0] = PARAMETER_FILE_HEADER1;
+            parameterEntries[1] = PARAMETER_FILE_HEADER2;
+            parameterEntries[2] = PARAMETER_FILE_HEADER3;
+            parameterEntries[3] = PARAMETER_FILE_HEADER4;
+            parameterEntries[4] = PARAMETER_FILE_HEADER5;
+            parameterWriter.writeNext(parameterEntries);
+
+
+            for(ParameterExtractGridObject parameterExtractGridObject: parameterExtractGridObjects){
+                //actual row!
+                parameterEntries[0] = parameterExtractGridObject.getTargetAlarmParameter();
+                parameterEntries[1] = parameterExtractGridObject.getSourceAlarmParameter();
+                parameterEntries[2] = parameterExtractGridObject.getKeyword();
+                parameterEntries[3] = parameterExtractGridObject.getExtractAfterKeyword();
+                parameterEntries[4] = parameterExtractGridObject.getPostProcessing();
+
+                parameterWriter.writeNext(parameterEntries);
+            }
+
+            parameterWriter.close();
+
+
+
+
+            //alarm identifier
+            CSVWriter alarmWriter = new CSVWriter(new FileWriter(directory+File.separator+profile.getProfileId()+ALARM_IDENTIFIER_SUFFIX),',');
+            // feed in your array (or convert your data to an array)
+            //header first
+            String[] alarmEntries = new String[21];
+            alarmEntries[0] = ALARM_FILE_HEADER1;
+            alarmEntries[1] = ALARM_FILE_HEADER2;
+            alarmEntries[2] = ALARM_FILE_HEADER3;
+            alarmEntries[3] = ALARM_FILE_HEADER4;
+            alarmEntries[4] = ALARM_FILE_HEADER5;
+            alarmEntries[5] = ALARM_FILE_HEADER6;
+            alarmEntries[6] = ALARM_FILE_HEADER7;
+            alarmEntries[7] = ALARM_FILE_HEADER8;
+            alarmEntries[8] = ALARM_FILE_HEADER9;
+            alarmEntries[9] = ALARM_FILE_HEADER10;
+            alarmEntries[10] = ALARM_FILE_HEADER11;
+            alarmEntries[11] = ALARM_FILE_HEADER12;
+            alarmEntries[12] = ALARM_FILE_HEADER13;
+            alarmEntries[13] = ALARM_FILE_HEADER14;
+            alarmEntries[14] = ALARM_FILE_HEADER15;
+            alarmEntries[15] = ALARM_FILE_HEADER16;
+            alarmEntries[16] = ALARM_FILE_HEADER17;
+            alarmEntries[17] = ALARM_FILE_HEADER18;
+            alarmEntries[18] = ALARM_FILE_HEADER19;
+            alarmEntries[19] = ALARM_FILE_HEADER20;
+            alarmEntries[20] = ALARM_FILE_HEADER21;
+
+            alarmWriter.writeNext(alarmEntries);
+
+            for(AlarmIdentifierGridObject alarmIdentifierGridObject: alarmIdentifierGridObjects){
+                //actual row!
+                alarmEntries[0] = alarmIdentifierGridObject.getEventId();
+                alarmEntries[1] = alarmIdentifierGridObject.getVariables();
+                alarmEntries[2] = alarmIdentifierGridObject.getShowAlarm();
+                alarmEntries[3] = alarmIdentifierGridObject.getDatabaseTable();
+                alarmEntries[4] = alarmIdentifierGridObject.getDatabaseAccess();
+                alarmEntries[5] = alarmIdentifierGridObject.getTableColumns();
+                alarmEntries[6] = alarmIdentifierGridObject.getAdditionalText();
+                alarmEntries[7] = alarmIdentifierGridObject.getProbableCause();
+                alarmEntries[8] = alarmIdentifierGridObject.getPerceivedSeverity();
+                alarmEntries[9] = alarmIdentifierGridObject.getAlarmType();
+                alarmEntries[10] = alarmIdentifierGridObject.getUserText();
+                alarmEntries[11] = alarmIdentifierGridObject.getLabel1();
+                alarmEntries[12] = alarmIdentifierGridObject.getLabel2();
+                alarmEntries[13] = alarmIdentifierGridObject.getLabel3();
+                alarmEntries[14] = alarmIdentifierGridObject.getLabel4();
+                alarmEntries[15] = alarmIdentifierGridObject.getLabel5();
+                alarmEntries[16] = alarmIdentifierGridObject.getLabel6();
+                alarmEntries[17] = alarmIdentifierGridObject.getLabel7();
+                alarmEntries[18] = alarmIdentifierGridObject.getLabel8();
+                alarmEntries[19] = alarmIdentifierGridObject.getLabel9();
+                alarmEntries[20] = alarmIdentifierGridObject.getLabel10();
+
+                alarmWriter.writeNext(alarmEntries);
+            }
+
+            alarmWriter.close();
+
+
+            //custom fields file
+            FileWriter fw = new FileWriter(directory+File.separator+CUSTOM_FIELDS);
+            BufferedWriter bw = new BufferedWriter(fw);
+
+            bw.write(CUSTOM_FIELD_LINE1);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE2);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE3);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE4);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE5);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE6);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE7);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE8);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE9);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE10);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE11);
+            bw.newLine();
+            bw.write(CUSTOM_FIELD_LINE12);
+            bw.newLine();
+
+            bw.close();
+
+
+        } catch(Exception e){
+
+            e.printStackTrace();
+            return -1;       //error encountered in creating the files
+        }
+
+        return 0;//success?
+    }
+
+
+    private static void createCustomFieldsCsv(){
+
+
+
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+}

@@ -1,0 +1,433 @@
+function insertCallIdsJob() {
+    var form = Ext.getCmp('call-Ids-form').getForm();
+    if (form.isValid()) {
+        var startDateTime = Ext.Date.format(Ext.getCmp('startDate').getValue(),'y-m-d') + ' ' + Ext.Date.format(Ext.getCmp('startTime').getValue(),'H:i:s');
+        var endDateTime =  Ext.Date.format(Ext.getCmp('endDate').getValue(),'y-m-d') + ' ' + Ext.Date.format(Ext.getCmp('endTime').getValue(),'H:i:s');
+
+        if ((Ext.getCmp('startDate').getValue() == null) || (Ext.getCmp('endDate').getValue() == null)||(Ext.getCmp('startTime').getValue() == null) || (Ext.getCmp('endTime').getValue() == null)){
+            Ext.Msg.alert('Warning!', 'Start | End Date & Time can not be empty.' );
+            return false;
+        }else if (!(endDateTime > startDateTime)){
+            Ext.Msg.alert('Warning!', 'End Date Time should be greater than the start date time.' );
+            return false;
+        }
+
+        var srcNumber = Ext.getCmp('aNum').getValue();//Ext.getCmp('servicesCombo').getValue();
+        var destNumber =  Ext.getCmp('bNum').getValue();//Ext.getCmp('bNumber').getValue();
+        var isWildCardEnable = Ext.getCmp('isWildCardEnable').getValue();
+
+        if (isWildCardEnable){
+            srcNumber = srcNumber.substr(0,2) == '60' ? srcNumber.substr(2,srcNumber.length): srcNumber;
+            srcNumber = '\\%' +  srcNumber;
+            Ext.getCmp('aNum').setValue(srcNumber);
+
+            destNumber = destNumber.substr(0,2) == '60' ? destNumber.substr(2,destNumber.length): destNumber;
+            destNumber = destNumber.substr(0,1) == '0' ? destNumber.substr(1,destNumber.length): destNumber;
+            destNumber = '\\%' +  destNumber;
+            Ext.getCmp('bNum').setValue(destNumber);
+        }else{
+            Ext.getCmp('aNum').setValue(Ext.getCmp('servicesCombo').getValue());
+            Ext.getCmp('bNum').setValue(Ext.getCmp('bNumber').getValue());
+        }
+
+        form.submit({
+            success:function (form, action) {
+                modelCallIdsWin.close();
+                Ext.getCmp('modelCallerIdsPBWin').show();
+                //Ext.getCmp('searchCallIdsBtn').setDisabled(true);
+                //Ext.getCmp('searchCallIdsBtn').setText('please wait ...');
+                getCallIds(Ext.decode(action.response.responseText).data.jobId);
+            },
+            failure:function (form, action) {
+                Ext.Msg.alert('Job Failed', 'Caught internal error. Please check the logs for details.' );
+            }
+        });
+    }
+}
+
+function getCallIds(jobsId){
+    Ext.require([ '*' ]);
+    Ext.Ajax.request({
+        url : 'getCallIds.htm',
+        method : 'POST',
+        params : {"jobId":jobsId},
+        success : function(response) {
+            var status = Ext.decode(response.responseText).success;
+            if (status){
+                var result = Ext.decode(response.responseText).data.status;
+                if (result == 'PENDING')
+                    getCallIds(jobsId);
+                else  if (result == 'SUCCESS'){
+                    callIdsGridTab.store.loadData(Ext.decode(response.responseText).data.CallIdsList, false);
+                    callIdsGridTab.store.sort('callId', 'DESC');
+                    topoTabPanel.setActiveTab(3);
+                    if(Ext.getCmp('tabTopo').getCollapsed()) Ext.getCmp('tabTopo').toggleCollapse();
+                    Ext.getCmp('modelCallerIdsPBWin').close();
+                    //Ext.getCmp('searchCallIdsBtn').setDisabled(false);
+                    //Ext.getCmp('searchCallIdsBtn').setText('Get Call Ids');
+                }
+            }else if (!status){
+                modelCallIdsWin.close();
+                var jsonRespObj = Ext.decode(response.responseText).data;
+                Ext.getCmp('modelCallerIdsPBWin').close();
+                //Ext.getCmp('searchCallIdsBtn').setDisabled(false);
+                //Ext.getCmp('searchCallIdsBtn').setText('Get Call Ids');
+                Ext.Msg.alert('Job Failed', jsonRespObj.errCode + "<br>" + jsonRespObj.errMsg );
+            }
+        },
+        failure : function(response) {
+            Ext.Msg.alert('Job Failed', 'Caught internal error. Please check the logs for details.' );
+        }
+    });
+}
+
+function insertCallKPIJob(callId,startDateTime,endDateTime) {
+    Ext.Ajax.request({
+        url : 'insertCallKPIJob.htm',
+        method : 'POST',
+        params : {"callId":callId, "startDateTime":startDateTime,"endDateTime":endDateTime,"subscriberId":Ext.getCmp('servicesCombo').getValue()},
+        success : function(response) {
+            Ext.getCmp('modelCallerIdsPBWin').show();
+            //Ext.getCmp('searchCallIdsBtn').setDisabled(true);
+            //Ext.getCmp('searchCallIdsBtn').setText('please wait ...');
+            getCallKPI(Ext.decode(response.responseText).data.jobId);
+        },
+        failure : function(response) {
+            Ext.Msg.alert('Job Failed', 'Caught internal error. Please check the logs for details.' );
+        }
+    });
+}
+
+function getCallKPI(jobsId){
+    Ext.require([ '*' ]);
+    Ext.Ajax.request({
+        url : 'getCallKPI.htm',
+        method : 'POST',
+        params : {"jobId":jobsId},
+        success : function(response) {
+            var status = Ext.decode(response.responseText).success;
+            if (status){
+                var result = Ext.decode(response.responseText).data.status;
+                if (result == 'PENDING')
+                    getCallKPI(jobsId);
+                else  if (result == 'SUCCESS'){
+                    var fwdList = Ext.decode(response.responseText).data.fwdKpiList;
+                    var revList = Ext.decode(response.responseText).data.revKpiList;
+                    var othList = Ext.decode(response.responseText).data.othKpiList;
+                    updateCallKpi(fwdList,revList,othList, is2leg);
+                    Ext.getCmp('modelCallerIdsPBWin').close();
+                    modelCallIdsWin.close();
+                    //Ext.getCmp('searchCallIdsBtn').setDisabled(false);
+                    //Ext.getCmp('searchCallIdsBtn').setText('Get Call Ids');
+                }
+            }else if (!status){
+                var jsonRespObj = Ext.decode(response.responseText).data;
+                Ext.getCmp('modelCallerIdsPBWin').close();
+                //Ext.getCmp('searchCallIdsBtn').setDisabled(false);
+                //Ext.getCmp('searchCallIdsBtn').setText('Get Call Ids');
+                Ext.Msg.alert('Job Failed', jsonRespObj.errCode + "<br>" + jsonRespObj.errMsg );
+            }
+        },
+        failure : function(response) {
+            Ext.Msg.alert('Job Failed', 'Caught internal error. Please check the logs for details.' );
+        }
+    });
+}
+
+var callIdsFormPanel = {
+    xtype:'form',
+    height:250,
+    id:'call-Ids-form',
+    url:'insertHPSAPassiveTestJob.htm',
+    layout:'form',
+    frame:true,
+    bodyPadding:10,
+    defaults:{
+        anchor:'100%',
+        labelWidth:150
+    },
+    items       : [
+        {
+            xtype       : 'datefield',
+            id          :'startDate',
+            anchor      : '100%',
+            fieldLabel  : 'Start Date',
+            name        : 'startDate',
+            format      : 'm/d/y',
+            maxValue    : new Date(),
+            maskRe      : /[0-9\/]/,
+            value       :new Date()
+        },{
+            xtype       : 'timefield',
+            id          :'startTime',
+            format      : 'H:i:s',
+            name        : 'startTime',
+            fieldLabel  : 'Start Time',
+            increment   : 15,
+            anchor      : '100%',
+            value       :'00:00:00'
+        },{
+            xtype       : 'datefield',
+            id          :'endDate',
+            anchor      : '100%',
+            fieldLabel  : 'End Date',
+            name        : 'endDate',
+            format      : 'm/d/y',
+            maxValue    : new Date(),
+            maskRe      : /[0-9\/]/,
+            value       :new Date()
+        },{
+            xtype       : 'timefield',
+            id          :'endTime',
+            format      : 'H:i:s',
+            name        : 'endTime',
+            fieldLabel  : 'End Time',
+            increment   : 15,
+            anchor      : '100%',
+            value       : '23:59:59'
+        },{
+            xtype       : 'textfield',
+            fieldLabel  : 'Source Number',
+            id          : 'aNum',
+            name        : 'aNum'/*,
+            value       :  Ext.getCmp('servicesCombo').getValue()*/
+        },{
+            xtype       : 'textfield',
+            fieldLabel  : 'Destination Number',
+            id          : 'bNum',
+            name        : 'bNum'/*,
+            value       :  Ext.getCmp('bNumber').getValue()*/
+        },{
+            xtype       :'checkboxfield',
+            boxLabel    : 'Allow Wild Card',
+            name        : 'isWildCardEnable',
+            inputValue  : '0',
+            id          : 'isWildCardEnable'
+        }
+    ],
+    buttons: [{
+        text: 'Reset',
+        handler: function() {
+            this.up('form').getForm().reset();
+        }
+    }, {
+        id:'searchCallIdsBtn',
+        text: 'Get Call Ids',
+        formBind: true,
+        disabled: true,
+        handler: insertCallIdsJob
+    }],
+    listeners: {
+        afterRender: function(thisForm, options){
+            this.keyNav = Ext.create('Ext.util.KeyNav', this.el, {
+                enter: insertCallIdsJob,
+                scope: this
+            });
+        }
+    }
+};
+
+var modelCallIdsWin = Ext.widget('window', {
+    title:'Get call ids - Filter',
+    id:'callids-win',
+    closeAction:'hide',
+    width:350,
+    layout:'fit',
+    modal:true,
+    items:[callIdsFormPanel]
+});
+
+var callerIdsPgbar = Ext.create('Ext.ProgressBar', {
+    id    : 'callerIdsPgbar',
+    width : 300,
+    height:10
+});
+callerIdsPgbar.wait({
+    interval: 500,
+    increment: 15,
+    text: 'fetching...',
+    scope: this
+});
+
+
+var modelCallerIdsPBWin  = Ext.widget('window', {
+    id : 'modelCallerIdsPBWin',
+    title: 'Please wait ...  ',
+    closeAction: 'hide',
+    width: 400,
+    layout: 'fit',
+    resizable: true,
+    modal: false,
+    items  : [callerIdsPgbar]
+});
+
+Ext.define('CallIdsGridModel', {
+    extend: 'Ext.data.Model',
+    fields: [
+        {name: 'callId',    type: 'string'},
+        {name: 'startDtTime',  type: 'string'},
+        {name: 'endDtTime', type:'string' },
+        {name: 'duration', type:'string' },
+        {name: 'callStatus', type:'string' }
+    ]
+});
+
+var callIdsGridStore = Ext.create('Ext.data.Store', {
+    id: 'callIdsGrid-store',
+    autoLoad: false,
+    model: 'CallIdsGridModel',
+    proxy: {
+        type: 'memory',
+        reader: {
+            type: 'json',
+            root: 'CallIdsList'
+        }
+    }
+});
+
+var callIdsGridTab = Ext.create('Ext.grid.Panel', {
+    id:'callIdsGrid-panel',
+    iconCls:'icon-grid',
+    store: callIdsGridStore,
+    columns: [
+        {text: "Call Id", flex:1, sortable: true, dataIndex: 'callId'},
+        {text: "Start Date Time", flex:1, sortable: true, dataIndex: 'startDtTime'},
+        {text: "End Date Time", flex:1, sortable: true, dataIndex: 'endDtTime'},
+        {text: "Duration", flex:1, sortable: true, dataIndex: 'duration'},
+        {text: "Status", flex:1, sortable: true, dataIndex: 'callStatus'},
+        {xtype:'actioncolumn', sortable:false,text:"Call Details",
+            items:[
+                {
+                    icon:'images/connect.gif',
+                    tooltip:'View call detail in BrixWorx',
+                    handler:function (grid, rowIndex, colIndex) {
+                        var rec = grid.getStore().getAt(rowIndex);
+                        var callId = rec.get('callId');
+
+                        window.open("http://10.242.43.235:8080/reports/voip/call_detail.html?call_id="+callId +"&in_popup=1","testing");
+                    }
+                }
+            ]},
+        { xtype:'actioncolumn', sortable:false, text:"Call KPI",
+            items:[
+                {
+                    icon:'images/application_go.png',
+                    tooltip:'Get call KPI info from BrixWorx',
+                    handler:function (grid, rowIndex, colIndex) {
+                        var rec = grid.getStore().getAt(rowIndex);
+                        var callId = rec.get('callId');
+                        var startDateTime = rec.get('startDtTime');
+                        var endDateTime = rec.get('endDtTime');
+                        insertCallKPIJob(callId,startDateTime,endDateTime);
+                    }
+                }
+            ]}
+    ],
+    columnLines:true,
+    collapsible:false,
+    title:'Exfo - Call ID List',
+    autoScroll:true
+});
+
+function updateCallKpi(fwdList,revlist,othList, is2Leg) {
+
+    if(!is2Leg) {
+        kpi_x2 = 840;
+        kpi_y2 = 430;
+    }
+
+    var drawSprites = [];
+    var node, textNode;
+    var y3 = (kpi_y1 + kpi_y2)/2;
+    var y4 = y3 + 110;
+    // Remove existing sprite object from Surface
+    cw.surface.getGroup("call_kpi_text_object").each(function (item, id, len) {
+        cw.surface.remove(item, true);
+    });
+
+    for (idx in fwdList){
+        textNode = {
+            type:"text",
+            text:fwdList[idx],
+            x:kpi_x1  + 60,
+            y:y3+(idx*15),
+            'text-anchor':"left",
+            font:"12px century gothic",
+            "group":'call_kpi_text_object'
+        };
+        drawSprites.push(textNode);
+    }
+
+    for (idx in revlist){
+        textNode = {
+            type:"text",
+            text:revlist[idx],
+            x:kpi_x1 - 120,
+            y:y4-(idx*15),
+            'text-anchor':"left",
+            font:"12px century gothic",
+            "group":'call_kpi_text_object'
+        };
+        drawSprites.push(textNode);
+    }
+
+    for (idx in othList){
+        textNode = {
+            type:"text",
+            text:othList[idx],
+            x:kpi_x1,
+            y:kpi_y1-60+(idx*15),
+            'text-anchor':"left",
+            font:"12px century gothic",
+            "group":'call_kpi_text_object'
+        };
+        drawSprites.push(textNode);
+    }
+
+    drawSprites.push({
+        id:'cloud_arrow',
+        width:130,
+        height:270,
+        x:kpi_x2-20,
+        y:kpi_y2-280,
+        type: "image",
+        src: 'images/cloud-with-arrow-1.png',
+        "group":'call_kpi_text_object'
+    });
+
+
+    if(!is2Leg){
+        drawSprites.push({
+            id:'new_node',
+            type:'rect',
+            width:80,
+            height:40,
+            x:kpi_x2,
+            y:kpi_y2,
+            radius:1,
+            fill:'#ffffff',
+            stroke:'#000',
+            "fill-opacity":100,
+            'stroke-width':1,
+            cursor:"hand",
+            group:'call_kpi_text_object'
+        });
+
+        drawSprites.push({
+            type:"text",
+            text:Ext.getCmp('bNumber').getValue(),
+            x:(kpi_x2+40),
+            y:(kpi_y2+20),
+            'text-anchor':"middle",
+            font:"10px century gothic",
+            "group":'call_kpi_text_object'
+        });
+    }
+
+
+    for (i in drawSprites){
+        var sprite = Ext.create('Ext.draw.Sprite', drawSprites[i]);
+        cw.surface.add(sprite).show(true);
+    }
+
+}

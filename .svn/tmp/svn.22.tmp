@@ -1,0 +1,13 @@
+#localdev
+#script.inputdir=C:\\testelito
+#script.outputdir=C:\\testelito
+#script.install.filename=file.bat
+#script.preview.filename=file.bat
+
+#dev
+#script.inputdir=C:\\testelito
+script.outputdir=/opt/temip-gui
+script.install.filename=./install
+script.preview.filename=/usr/opt/temip/bin/test_mapping.pl
+script.translatecsv.filename=/usr/opt/temip/bin/translate_csv_files.pl
+

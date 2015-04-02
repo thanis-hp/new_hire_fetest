@@ -1,0 +1,170 @@
+Ext.onReady(function () {
+    Ext.QuickTips.init();
+    var login = new Ext.FormPanel({
+        id:'login',
+        labelWidth:80,
+        url:'j_spring_security_check',
+        frame:true,
+        title:'Please Login',
+        defaultType:'textfield',
+        monitorValid:true,
+        items:[
+            {
+                fieldLabel:'Username',
+                name:'j_username',
+                allowBlank:false
+            },
+            {
+                fieldLabel:'Password',
+                name:'j_password',
+                inputType:'password',
+                allowBlank:false
+            }
+        ],
+        buttons:[
+            {
+                text:'Login',
+                formBind:true,
+                handler: fnLogin
+            }
+        ],
+        listeners: {
+            afterRender: function(thisForm, options){
+                this.keyNav = Ext.create('Ext.util.KeyNav', this.el, {
+                    enter: fnLogin,
+                    scope: this
+                });
+            }
+        }
+    });
+
+    Ext.apply(Ext.form.VTypes, {
+        password : function(val, field) {
+            if (field.initialPassField) {
+                var pwd = Ext.getCmp(field.initialPassField);
+                return (val == pwd.getValue());
+            }
+            return true;
+        },
+        passwordText : 'Password do not match'
+    });
+
+    var win = new Ext.Window({
+        layout:'fit',
+        width:300,
+        height:150,
+        closable:false,
+        resizable:false,
+        plain:true,
+        border:false,
+        items:[login]
+    });
+
+    function fnLogin(){
+        login.getForm().submit({
+            method:'POST',
+            waitTitle:'Connecting',
+            waitMsg:'Authenticating User...',
+            success:function (form, action) {
+
+                var obj = Ext.JSON.decode(action.response.responseText);
+                if (obj['new']) {
+                    var updatePasswordForm =  new Ext.FormPanel({
+                        id: 'change-password-form',
+                        width: 300,
+                        height: 150,
+                        frame:true,
+                        url:'updateNewPassword.htm',
+
+                        items: [
+                            {
+                                xtype:'textfield',
+                                fieldLabel:'New Password',
+                                id:'newPassword',
+                                name:'newPassword',
+                                inputType:'password',
+                                allowBlank:false
+                            },{
+                                xtype:'textfield',
+                                fieldLabel:'Confirm Password',
+                                id:'confirmPassword',
+                                name:'confirmPassword',
+                                inputType:'password',
+                                vtype : 'password',
+                                initialPassField : 'newPassword',
+                                allowBlank:false
+                            }
+                        ],
+                        buttons: [
+                            {
+                                text: 'Update',
+                                disabled: false,
+                                formBind:true,
+                                handler: function () {
+
+                                    var form = this.up('form').getForm();
+                                    if (form.isValid()) {
+                                        this.up('window').hide();
+                                        Ext.getBody().mask('Updating Password...');
+                                        form.submit({
+                                            success:function (form, action) {
+                                                Ext.Msg.alert('Success', 'Password updated successfully');
+                                                updatePasswordWindow.close();
+                                                Ext.getBody().unmask();
+
+                                            },
+                                            failure:function (form, action) {
+                                                Ext.getBody().unmask();
+                                                Ext.Msg.alert('Failed', 'Fail to update password. ' +
+                                                    'Please contact administrator.');
+                                            }
+                                        });
+                                    }
+
+                                }
+                            }
+                        ]
+                    });
+
+                    var updatePasswordWindow = new Ext.Window({
+                        title: 'New User - Update Password',
+                        layout:'fit',
+                        width:300,
+                        height:150,
+                        bodyPadding: 1,
+                        modal: true,
+                        resizable:false,
+                        plain:true,
+                        border:false,
+                        closable: false,
+                        items:[updatePasswordForm]
+                    });
+                    updatePasswordWindow.show();
+
+                } else {
+                    Ext.MessageBox.show({
+                        msg: 'Login Successful! Please wait...',
+                        progressText: 'Redirecting...',
+                        width:300,
+                        wait:true,
+                        waitConfig: {interval:100},
+                        animateTarget: 'login'
+                    });
+
+                    setTimeout(function () {
+                        var redirect = 'launchMain.htm';
+                        window.location = redirect;
+                    }, 1000);
+                }
+            },
+            failure:function (form, action) {
+                Ext.Msg.alert('Login Failed!', 'Authentication on the server failed. ' +
+                    'Please check your username/password.');
+                login.getForm().reset();
+            }
+        });
+    }
+
+    win.show();
+});
+

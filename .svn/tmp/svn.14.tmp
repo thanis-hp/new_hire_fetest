@@ -1,0 +1,105 @@
+<%--
+  Created by IntelliJ IDEA.
+  User: rajagova
+  Date: 8/16/12
+  Time: 12:59 PM
+  To change this template use File | Settings | File Templates.
+--%>
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1" pageEncoding="ISO-8859-1"%>
+<%@ taglib uri="http://www.springframework.org/tags/form" prefix="form"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+
+<%
+    String contextPath = request.getContextPath();
+%>
+<html>
+<head>
+    <title>ALB Configuration Tool for TeMIP v1.01 @Hewlett Packard Sales (M) Sdn Bhd</title>
+    <link rel="stylesheet" type="text/css" href="<%=contextPath%>/scripts/ext.js/4.1.1/resources/css/ext-all.css">
+
+
+    <style type="text/css">
+        .icon-grid {
+            background-image:url(<%=contextPath%>/images/grid.png) !important;
+        }
+        .icon-refresh {
+            background-image:url(<%=contextPath%>/images/table_refresh.png) !important;
+        }
+        .icon-add-user {
+            background-image:url(<%=contextPath%>/images/user_add.gif) !important;
+        }
+        .icon-sync {
+            background-image:url(<%=contextPath%>/images/sync2.png) !important;
+        }
+        .icon-save {
+            background-image:url(<%=contextPath%>/images/save.png) !important;
+        }
+        .icon-search {
+            background-image:url(<%=contextPath%>/images/search16.png) !important;
+        }
+        .icon-reset {
+            background-image:url(<%=contextPath%>/images/undo.png) !important;
+        }
+        .icon-back {
+            background-image:url(<%=contextPath%>/images/back-icon.png) !important;
+        }
+        .icon-app-go {
+            background-image:url(<%=contextPath%>/images/application_go.png) !important;
+        }
+        .icon-remove {
+            background-image:url(<%=contextPath%>/images/remove.png) !important;
+        }
+        .icon-add {
+            background-image:url(<%=contextPath%>/images/add.png) !important;
+        }
+
+        .x-action-col-icon {
+            height: 16px;
+            width: 16px;
+            margin-right: 8px;
+        }
+
+    </style>
+
+
+
+    <script type="text/javascript" src="<%=contextPath%>/scripts/ext.js/4.1.1/ext-all.js"></script>
+    <script type="text/javascript" src="<%=contextPath%>/scripts/ext.js/4.1.1/ext-all.js"></script>
+    <script type="text/javascript" src="<%=contextPath%>/scripts/ext.js/startPanel.js"></script>
+    <script type="text/javascript" src="<%=contextPath%>/scripts/ext.js/newMainLayout.js"></script>
+    <script type="text/javascript" src="<%=contextPath%>/scripts/ext.js/profileManagement.js"></script>
+    <script type="text/javascript" src="<%=contextPath%>/scripts/ext.js/userManagement.js"></script>
+    <script type="text/javascript" src="<%=contextPath%>/scripts/ext.js/userAccessGrid.js"></script>
+    <script type="text/javascript" src="<%=contextPath%>/scripts/ext.js/sampleAlarmManagement.js"></script>
+
+    <script src="<%=contextPath%>/scripts/codemirror/codemirror.js"></script>
+    <script src="<%=contextPath%>/scripts/codemirror/hint/show-hint.js"></script>
+    <script src="<%=contextPath%>/scripts/codemirror/hint/javascript-hint.js"></script>
+    <link rel="stylesheet" href="<%=contextPath%>/scripts/codemirror/codemirror.css">
+    <link rel="stylesheet" href="<%=contextPath%>/scripts/codemirror/hint/show-hint.css">
+    <script src="<%=contextPath%>/scripts/codemirror/mode/javascript/javascript.js"></script>
+
+
+    <script type="text/javascript">
+        var selectedProfile; //contains the selected profile
+        var selectedVersion; //contains the selected version
+
+        Ext.onReady(function(){
+            startPanel();
+        })
+    </script>
+</head>
+<body>
+    <div style="display:none;">
+
+        <!-- Start page content -->
+        <div id="start-div">
+            <div style="float:left;" ><img src="<%=contextPath%>/images/HP.gif" /></div>
+            <div style="margin-left:100px;">
+                <p></p>
+                <p>Select an item on the left to begin.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,314 @@
+function getLinkUtilzGrid() {
+
+    var linkUtilzStore = new Ext.data.JsonStore({
+        storeId:'Link',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getLinkUtilzKpi.htm',
+            reader:{
+                type:'json',
+                root:'link'
+            }
+        },
+
+        fields:['equipName', 'deviceType', 'location', 'vendor', 'kpiThresholdMidUtilz', 'kpiThresholdMaxUtilz']
+    });
+
+    var locationStore = new Ext.data.JsonStore({
+        storeId:'LocationStore',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getLocationList.htm',
+            reader:{
+                type:'json',
+                root:'location'
+            }
+        },
+        fields:['name', 'value']
+    });
+
+    var vendorStore = new Ext.data.JsonStore({
+        storeId:'VendorStore',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getVendorList.htm',
+            reader:{
+                type:'json',
+                root:'vendor'
+            }
+        },
+
+        fields:['name', 'value']
+    });
+
+    var deviceList = new Ext.data.JsonStore({
+        storeId:'DeviceStore',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getDeviceList.htm',
+            reader:{
+                type:'json',
+                root:'device'
+            }
+        },
+
+        fields:['name', 'value']
+    });
+
+    var cellEditing = Ext.create('Ext.grid.plugin.CellEditing', {
+        clicksToEdit:1
+    });
+
+    var syncSettingForm = {
+        xtype:'form',
+        id:'syncSettingFormUtilz',
+        layout:'form',
+        frame: true,
+        width   : 600,
+        bodyPadding: 10,
+        defaults: {
+            anchor: '100%',
+            labelWidth: 100
+        },
+        url:'updateLinkUtilzKpiBatch.htm',
+        items:[
+            {
+                xtype:'textfield',
+                id:'txtKpiThresholdMidUtilz',
+                name:'kpiThresholdMidUtilz',
+                value:'',
+                fieldLabel:'Major Threshold',
+                allowBlank:false,
+                readOnly:false
+            },
+            {
+                xtype:'textfield',
+                id:'txtKpiThresholdMaxUtilz',
+                name:'kpiThresholdMaxUtilz',
+                value:'',
+                fieldLabel:'Critical Threshold',
+                allowBlank:false,
+                readOnly:false
+            },
+            {
+                xtype: 'fieldset',
+                title: 'Sync Condition',
+                collapsible: false,
+                defaults: {
+                    labelWidth: 89,
+                    anchor: '100%',
+                    layout: {
+                        type: 'hbox',
+                        defaultMargins: {top: 0, right: 5, bottom: 0, left: 0}
+                    }
+                },
+                items: [
+                    {
+                        width:          50,
+                        xtype:          'combo',
+                        mode:           'local',
+                        forceSelection: true,
+                        editable:       false,
+                        fieldLabel:     'Location',
+                        name:           'location',
+                        displayField:   'name',
+                        valueField:     'value',
+                        allowBlank: false,
+                        queryMode: 'local',
+                        store: locationStore
+                    },{
+                        width:          50,
+                        xtype:          'combo',
+                        mode:           'local',
+                        forceSelection: true,
+                        editable:       false,
+                        fieldLabel:     'Equipment Type',
+                        name:           'deviceType',
+                        displayField:   'name',
+                        valueField:     'value',
+                        allowBlank: false,
+                        queryMode: 'local',
+                        store:    deviceList
+                    },{
+                        width:          50,
+                        xtype:          'combo',
+                        mode:           'local',
+                        forceSelection: false,
+                        editable:       false,
+                        fieldLabel:     'Vendor',
+                        name:           'vendor',
+                        displayField:   'name',
+                        valueField:     'value',
+                        allowBlank: false,
+                        queryMode: 'local',
+                        store:  vendorStore
+                    }
+                ]
+            }
+        ],
+        buttons:[
+            {
+                text:'Cancel',
+                handler:function () {
+                    this.up('window').hide();
+                }
+            },
+            {
+                text:'Sync',
+                formBind:true,
+                handler:function () {
+                    if (parseInt(Ext.getCmp('txtKpiThresholdMaxUtilz').getValue()) < parseInt(Ext.getCmp('txtKpiThresholdMidUtilz').getValue())) {
+                        Ext.Msg.alert("Fail", "Max Threshold cannot be less than Min Threshold ");
+                    }else{
+                        var form = this.up('form').getForm();
+                        if (form.isValid()) {
+                            this.up('window').hide();
+                            Ext.getBody().mask('Syncing Utilization KPI Threshold Settings...');
+                            form.submit({
+                                success:function (form, action) {
+                                    linkUtilzStore.reload();
+                                    Ext.getBody().unmask();
+
+                                },
+                                failure:function (form, action) {
+                                    Ext.getBody().unmask();
+                                    Ext.Msg.alert('Failed', 'Fail to sync.');
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        ]
+    };
+
+    var syncUtilzKpiModelWin = Ext.widget('window', {
+        title:'Sync Setting to Other Equipments',
+        closeAction:'hide',
+        width:450,
+        layout:'fit',
+        modal:true,
+        items:[syncSettingForm]
+    });
+
+
+    var utilzKpiGrid = Ext.create('Ext.grid.Panel', {
+        id:'utilz-kpi-panel',
+        store:linkUtilzStore,
+        columns:[
+            Ext.create('Ext.grid.RowNumberer'),
+            {text:"Managed Element", flex:1, sortable:true, dataIndex:'equipName'},
+            {text:"Equipment Type", flex:1, sortable:true, dataIndex:'deviceType'},
+            {text:"Location", flex:1, sortable:true, dataIndex:'location'},
+            {text:"Vendor", flex:1, sortable:true, dataIndex:'vendor'},
+            {text:"Major Threshold (%)", width:140, sortable:true, dataIndex:'kpiThresholdMidUtilz',
+                editor:{
+                    xtype:'numberfield',
+                    minValue:0,
+                    maxValue:100
+                }},
+            {text:"Critical Threshold (%)", width:140, sortable:true, dataIndex:'kpiThresholdMaxUtilz',
+                editor:{
+                    xtype:'numberfield',
+                    minValue:0,
+                    maxValue:100
+                }},
+            { xtype:'actioncolumn', width:50, sortable:false,
+                items:[
+                    {
+                        icon:'images/sync2.png',
+                        tooltip:'Sync Setting to Other Equipments',
+                        handler:function (grid, rowIndex, colIndex) {
+                            //kpiStore.removeAt(rowIndex);
+                            var rec = grid.getStore().getAt(rowIndex);
+                            Ext.getCmp('txtKpiThresholdMidUtilz').setValue(rec.get('kpiThresholdMidUtilz'));
+                            Ext.getCmp('txtKpiThresholdMaxUtilz').setValue(rec.get('kpiThresholdMaxUtilz'));
+
+                            syncUtilzKpiModelWin.show();
+                        }
+                    }
+                ]
+            }
+        ],
+        columnLines:true,
+        collapsible:false,
+        title:'Link Utilization KPI Setting',
+        iconCls:'icon-grid',
+        autoScroll:true,
+        plugins:[cellEditing],
+        selModel:{
+            selType:'cellmodel'
+        },
+        tbar:[
+            {
+                xtype:'button',
+                iconCls: 'icon-refresh',
+                text:'Refresh',
+                handler:function () {
+                    linkUtilzStore.reload();
+                }
+            },
+            {
+                xtype:'button',
+                iconCls: 'icon-save',
+                text:'Save All',
+                handler:function () {
+                    var test = linkUtilzStore.getModifiedRecords();
+                    if (test.length > 0) {
+                        var dataArray = new Array();
+
+                        for (var i in test) {
+                            if (parseInt(test[i].data.kpiThresholdMaxUtilz) < parseInt(test[i].data.kpiThresholdMidUtilz)) {
+                                Ext.Msg.alert("Fail", "Max Threshold cannot be less than Min Threshold for " + test[i].data.equipName);
+                                return false;
+                            }
+                            dataArray.push(test[i].data);
+
+                        }
+
+                        var postValue = JSON.stringify(dataArray);
+                        postValue = "{\"link\":" + postValue + "}";
+                        Ext.getBody().mask('Saving KPI Threshold Settings...');
+                        Ext.Ajax.request(
+                            {
+                                url:'updateLinkUtilzKpi.htm',
+                                method:'POST',
+                                params:{dataArray:postValue},
+                                success:function (response) {
+                                    Ext.Msg.alert("Success", "Link Utilization KPI Threshold saved successfully.");
+                                    linkUtilzStore.reload();
+                                },
+                                failure:function (response) {
+                                    Ext.Msg.alert("Fail", "Fail to save Link Utilization KPI Threshold.");
+                                },
+                                callback:function () {
+                                    Ext.getBody().unmask();
+                                    linkUtilzStore.reload();
+                                }
+                            }
+                        );
+                    } else {
+                        Ext.Msg.alert("No Changes", "Nothing to save.")
+                    }
+                }
+            }
+        ],
+        listeners:{
+            activate: function(grid,eOpts) {
+                linkUtilzStore.reload();
+                locationStore.reload();
+                vendorStore.reload();
+                deviceList.reload();
+            }
+        }
+    });
+
+
+    return utilzKpiGrid;
+}
+
+

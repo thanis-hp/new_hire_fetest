@@ -1,0 +1,95 @@
+/*
+package com.hp.temip.alb_gui.util;
+
+import au.com.bytecode.opencsv.CSVParser;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+*/
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 8/22/13
+ * Time: 4:43 PM
+ * To change this template use File | Settings | File Templates.
+ *//*
+
+public class CsvParserTest {
+
+    //taken from http://stackoverflow.com/questions/13259529/regular-expression-for-reading-csv-in-java
+    //read blank values, double quotes, commas inside doubles quotes.
+    static final String CSV_PATTERN = "(?:\\s*(?:\\\"([^\\\"]*)\\\"|([^,]+))\\s*,?|(?<=,)(),?)+?";
+
+
+
+    public static List<String> getTokens(String line){
+        System.out.println("++++++++");
+        System.out.println("Input is: "+line);
+        List<String> resultList = new ArrayList<String>();
+
+
+        Matcher ma = Pattern.compile(CSV_PATTERN).matcher(line);
+        while (ma.find()) {
+            if (ma.group(1) == null) {
+                System.out.println("2:"+ma.group(2));
+                resultList.add(ma.group(2));
+            } else {
+                System.out.println("1:"+ma.group(1));
+                resultList.add(ma.group(1));
+            }
+        }
+
+        System.out.println("count is:"+resultList.size());
+        return resultList;
+    }
+
+
+    public static void main (String args[]){
+
+        List<String> inputs = new ArrayList<String>();
+
+        inputs.add("$OOCellID1,Additional Text,CELL       SCTYPE   CHTYPE   CHRATE   SPV,Word1,remove_leading_and_trailing_blanks($OOCellID1)");
+        inputs.add("$OOBSCName1,Additional Text,\"SubNetwork=ONRM_ROOT_MO_R,SubNetwork\",\"StringBetween('=',',')1\",\"if ExtractChars($OOBSCName1,0,1) == \"\"BS\"\" then $OOBSCName1 else \"\"\"\"\"");
+        inputs.add("$OOBTSName2,Additional Text,MO                                 RSITE           ALARM SLOGAN,Word2,remove_leading_and_trailing_blanks($OOBTSName2)");
+        inputs.add("$OOBTSName3,Additional Text,MO                SCGR  SC         RSITE           ALARM SLOGAN,Word2,\"if (substr_until($OOBTSName3a,\"\"-\"\") == \"\"RXOCF\"\") then $OOBTSName3b else\n" +
+                "if (substr_until($OOBTSName3a,\"\"-\"\") == \"\"RXOTG\"\") then $OOBTSName3c else\n" +
+                "remove_leading_and_trailing_blanks($OOBTSName3)\"");
+        inputs.add("$OODIP1,Additional Text,DIP      DIPEND,\"StringBetween('\\n','\\n')1\",\"substr_until($OODIP1,\"\" \"\")\"");
+        inputs.add("$OOMSCNameb2,Additional Text,ObjectOfReference=,\"StringBetween('=','\\n')1\",\"if match($OOMSCNameb2,\"\"_\"\")==0 && ExtractChars($OOMSCNameb2,0,1)==\"\"MG\"\" then remove_leading_and_trailing_blanks($OOMSCNameb2) else \"\"\"\"\"");
+
+
+        System.out.println("pattern is: " + CSV_PATTERN);
+        for(String input: inputs){
+            getTokens(input);
+        }
+
+
+        System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+
+        CSVParser csvParser = new CSVParser();
+
+
+        for(String input: inputs){
+            String[] result = new String[0];
+            try {
+                result = csvParser.parseLine(input);
+            } catch (IOException e) {
+                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            }
+
+
+            for(String oneLine: result){
+                System.out.println("LINE:"+oneLine);
+            }
+            System.out.println("total: "+result.length);
+        }
+
+
+    }
+
+}
+*/

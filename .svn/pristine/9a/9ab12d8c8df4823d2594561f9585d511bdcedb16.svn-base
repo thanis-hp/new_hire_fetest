@@ -1,0 +1,136 @@
+package com.hp.temip.alb_gui.service;
+
+import com.hp.temip.alb_gui.dao.ProfileMapper;
+import com.hp.temip.alb_gui.domain.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 8/16/12
+ * Time: 12:08 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Service("ProfileService")
+@Transactional(readOnly = false)
+public class ProfileService {
+    @Autowired
+    private ProfileMapper profileMapper;
+
+    private Log logger = LogFactory.getLog(getClass());
+
+
+    public List<ProfileGridObject> getProfileList() {
+        return (List<ProfileGridObject>) profileMapper.getProfileList();
+    }
+
+    public int updateProfileTranslateStatus(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.updateProfileTranslateStatus(profileGridObject);
+    }
+
+    public int updateProfileDeployStatus(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.updateProfileDeployStatus(profileGridObject);
+    }
+
+
+    public long getTopAlbVersion(String profileId) {
+        return (long) profileMapper.getTopAlbVersion(profileId);
+    }
+
+    public List<ProfileGridObject> checkProfileExists(String profileId) {
+        return (List<ProfileGridObject>) profileMapper.checkProfileExists(profileId);
+    }
+
+    public List<ProfileGridObject> getSingleProfile(ProfileGridObject profileGridObject) {
+        return (List<ProfileGridObject>) profileMapper.getSingleProfile(profileGridObject);
+    }
+
+    public int insertNewProfile(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.insertNewProfile(profileGridObject);
+    }
+
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
+    public int removeProfile(ProfileGridObject profileGridObject) throws Exception{
+        int result = 0;
+
+        result = profileMapper.removeAlarmIdentifier(profileGridObject);
+        result = profileMapper.removeParameterExtraction(profileGridObject);
+        result = profileMapper.removeSelectionControl(profileGridObject);
+        result = profileMapper.removeProfile(profileGridObject);
+
+        return result;
+    }
+
+
+
+    /**
+     * PROPER INSERT with transactions
+     * @return
+     */
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
+    public int insertProfile(ProfileGridObject profileGridObject, SelectionControlGridObject selectionControlGridObject,
+                             List<ParameterExtractGridObject> parameterExtractGridObjects,
+                             List<AlarmIdentifierGridObject> alarmIdentifierGridObjects) throws Exception{
+
+        int result = 0;
+
+        //insert the profile
+        result = profileMapper.insertNewProfile(profileGridObject);
+        logger.debug("Result after insertNewProfile:"+result);
+
+        //insert the selection control
+        result = profileMapper.insertNewSelectionControl(selectionControlGridObject);
+        logger.debug("Result after insertNewSelectionControl:"+result);
+
+        //iterate through the list of parameter extraction and insert each one
+        for(ParameterExtractGridObject parameterExtractGridObject: parameterExtractGridObjects){
+            result = profileMapper.insertNewParameterExtract(parameterExtractGridObject);
+            logger.debug("Result after insertNewParameter:"+result);
+        }
+
+
+        //iterate through the list of alarm identifiers and insert each one
+        for(AlarmIdentifierGridObject alarmIdentifierGridObject: alarmIdentifierGridObjects){
+            result = profileMapper.insertNewAlarmIdentifier(alarmIdentifierGridObject);
+            logger.debug("Result after insertNewAlarmIdentifier:"+result);
+        }
+
+        logger.debug("Result after all:"+result);
+
+        return result;
+    }
+
+
+
+    public List<SelectionControlGridObject> getSelectionControl(SelectionControlGridObject selectionControlGridObject) {
+        return (List<SelectionControlGridObject>) profileMapper.getSelectionControl(selectionControlGridObject);
+    }
+
+    public List<ParameterExtractGridObject> getParameterExtract(ParameterExtractGridObject parameterExtractGridObject) {
+        return (List<ParameterExtractGridObject>) profileMapper.getParameterExtract(parameterExtractGridObject);
+    }
+
+    public List<AlarmIdentifierGridObject> getAlarmIdentifier(AlarmIdentifierGridObject alarmIdentifierGridObject) {
+        return (List<AlarmIdentifierGridObject>) profileMapper.getAlarmIdentifier(alarmIdentifierGridObject);
+    }
+
+
+    public int insertNewSelectionControl(SelectionControlGridObject selectionControlGridObject){
+        return (int) profileMapper.insertNewSelectionControl(selectionControlGridObject);
+    }
+
+    public int insertNewParameterExtract(ParameterExtractGridObject parameterExtractGridObject){
+        return (int) profileMapper.insertNewParameterExtract(parameterExtractGridObject);
+    }
+
+    public int insertNewAlarmIdentifier(AlarmIdentifierGridObject alarmIdentifierGridObject){
+        return (int) profileMapper.insertNewAlarmIdentifier(alarmIdentifierGridObject);
+    }
+}

@@ -1,0 +1,187 @@
+Ext.require(['*']);
+
+function getProfileManagementMain(){
+//GRID STARTS HERE
+Ext.QuickTips.init();
+
+// setup the state provider, all state information will be saved to a cookie
+Ext.state.Manager.setProvider(Ext.create('Ext.state.CookieProvider'));
+
+// sample static data for the store
+var myData = [
+    ['Profile1','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending'],
+    ['Profile2','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending']
+];
+
+
+// create the data store
+var store = Ext.create('Ext.data.ArrayStore', {
+    fields: [
+        {name: 'profileName'},
+        {name: 'dateCreated',      type: 'date', dateFormat: 'n/j h:ia'},
+        {name: 'dateModified',     type: 'date', dateFormat: 'n/j h:ia'},
+        {name: 'translateStatus'},
+        {name: 'deployStatus'}
+    ],
+    data: myData
+});
+
+// create the Grid
+var grid = Ext.create('Ext.grid.Panel', {
+    id: 'profileManagement-panel',
+    frame: true,
+    store: store,
+    stateful: true,
+    stateId: 'stateGrid',
+    sealedColumns: true,
+    enableColumnMove: false,
+    enableColumnResize: false,
+    columns: [
+        {
+            text     : 'Profile Name',
+            flex     : 1,
+            sortable : false,
+            dataIndex: 'profileName'
+        },
+        {
+            text     : 'Date Created',
+            width    : 85,
+            sortable : true,
+            renderer : Ext.util.Format.dateRenderer('m/d/Y'),
+            dataIndex: 'dateCreated'
+        },
+        {
+            text     : 'Date Modified',
+            width    : 85,
+            sortable : true,
+            renderer : Ext.util.Format.dateRenderer('m/d/Y'),
+            dataIndex: 'dateModified'
+        },
+        {
+            text     : 'Translate Status',
+            width    : 90,
+            sortable : true,
+            dataIndex: 'translateStatus'
+        },
+        {
+            text     : 'Deploy Status',
+            width    : 90,
+            sortable : true,
+            dataIndex: 'deployStatus'
+        },
+        {
+            xtype: 'actioncolumn',
+            text: 'Actions',
+            width: 50,
+            items: [{
+                icon   : '../images/save.png',  // Use a URL in the icon config
+                tooltip: 'Save Files',
+                handler: function(grid, rowIndex, colIndex) {
+                    var rec = store.getAt(rowIndex);
+
+                    Ext.MessageBox.show({
+                        title:'Save '+rec.get('profileName'),
+                        msg:'Are you sure?',
+                        buttons:Ext.MessageBox.OKCANCEL,
+                        fn:function (btn) {
+                            if (btn == 'ok') {
+
+                            }
+                        },
+                        //animateTarget:'tree-panel',
+                        icon:Ext.MessageBox.QUESTION
+                    });
+                }
+            },{
+                icon   : '../images/information.png',  // Use a URL in the icon config
+                tooltip: 'Preview',
+                handler: function(grid, rowIndex, colIndex) {
+                    var rec = store.getAt(rowIndex);
+
+                    Ext.MessageBox.show({
+                        title:'Preview '+rec.get('profileName'),
+                        msg:'Are you sure?',
+                        buttons:Ext.MessageBox.OKCANCEL,
+                        fn:function (btn) {
+                            if (btn == 'ok') {
+
+                            }
+                        },
+                        //animateTarget:'tree-panel',
+                        icon:Ext.MessageBox.QUESTION
+                    });
+                }
+            },{
+                icon   : '../images/application_go.png',  // Use a URL in the icon config
+                tooltip: 'Deploy',
+                handler: function(grid, rowIndex, colIndex) {
+                    var rec = store.getAt(rowIndex);
+
+                    Ext.MessageBox.show({
+                        title:'Deploy '+rec.get('profileName'),
+                        msg:'Are you sure?',
+                        buttons:Ext.MessageBox.OKCANCEL,
+                        fn:function (btn) {
+                            if (btn == 'ok') {
+
+                            }
+                        },
+                        //animateTarget:'tree-panel',
+                        icon:Ext.MessageBox.QUESTION
+                    });
+                }
+            }
+
+//                    {
+//                    getClass: function(v, meta, rec) {          // Or return a class from a function
+//                        if (rec.get('change') < 0) {
+//                            this.items[1].tooltip = 'Hold stock';
+//                            return 'alert-col';
+//                        } else {
+//                            this.items[1].tooltip = 'Buy stock';
+//                            return 'buy-col';
+//                        }
+//                    },
+//                    handler: function(grid, rowIndex, colIndex) {
+//                        var rec = store.getAt(rowIndex);
+//                        alert((rec.get('change') < 0 ? "Hold " : "Buy ") + rec.get('profileName'));
+//                    }
+//                }
+            ]
+        }
+    ],
+    height: 350,
+    width: 700,
+    title: 'ALB Profile Management',
+    viewConfig: {
+        stripeRows: true
+    },
+    buttons: [{
+        text: 'Create New Profile',
+        handler:function () {
+            Ext.Msg.prompt('Profile Name', 'Please enter profile name:', function(btn, text, cfg) {
+                if(btn == 'ok' && Ext.isEmpty(text)) {
+                    var newMsg = '<span style="color:red">Please enter profile name:</span>';
+                    Ext.Msg.show(Ext.apply({}, { msg: newMsg }, cfg));
+                }
+            });
+        }
+
+
+    }]
+
+});
+
+    return grid;
+}
+
+
+
+function getProfileGrids(){
+
+
+
+
+
+
+}

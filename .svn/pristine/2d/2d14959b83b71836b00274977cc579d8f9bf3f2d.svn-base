@@ -1,0 +1,30 @@
+package com.hp.temip.alb_gui.service;
+
+import com.hp.temip.alb_gui.dao.AlbReference;
+import com.hp.temip.alb_gui.domain.AlbReferenceObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Copyright Hewlett Packard Sales (M) Sdn Bhd
+ * User: Thaniswaran Raja Goval
+ * Email: thaniswaran.raja-goval@hp.com
+ * Date: 9/25/13
+ * Time: 11:28 AM
+ * Project: $(PROJECT_NAME)
+ * Package: com.hp.temip.alb_gui.service
+ */
+@Service("AlbReferenceService")
+@Transactional(readOnly = true)
+public class AlbReferenceService {
+
+    @Autowired
+    private AlbReference albReference;
+
+    public List<AlbReferenceObject> getReferenceList(int refCat) {
+        return (List<AlbReferenceObject>) albReference.getReferenceList(refCat);
+    }
+}

@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hp.temip.alb_gui.dao.ProfileMapper">
+
+    <!-- Profile Grid object -->
+    <resultMap type="com.hp.temip.alb_gui.domain.ProfileGridObject" id="profileGrid">
+        <result column="PROFILE_ID" property="profileId" jdbcType="VARCHAR"/>
+        <result column="PROFILE_ALARM_PROCESSING" property="profileAlarmProcessing" jdbcType="VARCHAR"/>
+        <result column="CTRL_FILE_PARAMETER_EXTRACTION" property="controlFileParameterExtraction" jdbcType="VARCHAR"/>
+        <result column="CTRL_FILE_ALARM_IDENTIFIER" property="controlFileAlarmIdentifier" jdbcType="VARCHAR"/>
+        <result column="CUSTOM_FIELDS" property="customFields" jdbcType="VARCHAR"/>
+        <result column="ALB_VERSION" property="albVersion" jdbcType="INTEGER"/>
+        <result column="ALB_USER" property="albUser" jdbcType="VARCHAR"/>
+        <result column="DATE_CREATED" property="dateCreated" jdbcType="VARCHAR"/>
+        <result column="HOST_NAME" property="hostName" jdbcType="VARCHAR"/>
+        <result column="TRANSLATE_STATUS" property="translateStatus" jdbcType="VARCHAR"/>
+        <result column="DEPLOY_STATUS" property="deployStatus" jdbcType="VARCHAR"/>
+        <result column="HOST_ID" property="hostId" jdbcType="VARCHAR"/>
+        <result column="LAST_TRANSLATE" property="lastTranslate" jdbcType="VARCHAR"/>
+        <result column="LAST_DEPLOY" property="lastDeploy" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- Selection Control Grid Object -->
+    <resultMap type="com.hp.temip.alb_gui.domain.SelectionControlGridObject" id="selectionControlGrid">
+        <result column="PROFILE_ID" property="profileId" jdbcType="VARCHAR"/>
+        <result column="ACCESS_MODULE" property="accessModule" jdbcType="VARCHAR"/>
+        <result column="GLOBAL_CLASS" property="globalClass" jdbcType="VARCHAR"/>
+        <result column="DOMAINS" property="domains" jdbcType="VARCHAR"/>
+        <result column="NODE_NAME" property="nodeName" jdbcType="VARCHAR"/>
+        <result column="SUBCLASS" property="subclass" jdbcType="VARCHAR"/>
+        <result column="ORIGINAL_ALARM_REMAIN" property="originalAlarmRemain" jdbcType="VARCHAR"/>
+        <result column="PROFILE" property="profile" jdbcType="VARCHAR"/>
+        <result column="MANAGED_OBJECT_DISCRIMINATOR" property="managedObjectDiscriminator" jdbcType="VARCHAR"/>
+        <result column="ALB_VERSION" property="albVersion" jdbcType="INTEGER"/>
+        <result column="ALB_USER" property="albUser" jdbcType="VARCHAR"/>
+        <result column="DATE_CREATED" property="dateCreated" jdbcType="VARCHAR"/>
+    </resultMap>
+
+
+    <resultMap type="com.hp.temip.alb_gui.domain.ParameterExtractGridObject" id="parameterExtractGrid">
+        <result column="PROFILE_ID" property="profileId" jdbcType="VARCHAR"/>
+        <result column="TARGET_ALARM_PARAMETER" property="targetAlarmParameter" jdbcType="VARCHAR"/>
+        <result column="SOURCE_ALARM_PARAMETER" property="sourceAlarmParameter" jdbcType="VARCHAR"/>
+        <result column="KEYWORD" property="keyword" jdbcType="VARCHAR"/>
+        <result column="EXTRACT_AFTER_KEYWORD" property="extractAfterKeyword" jdbcType="VARCHAR"/>
+        <result column="POST_PROCESSING" property="postProcessing" jdbcType="CLOB"/>
+        <result column="ALB_VERSION" property="albVersion" jdbcType="INTEGER"/>
+        <result column="ALB_USER" property="albUser" jdbcType="VARCHAR"/>
+        <result column="DATE_CREATED" property="dateCreated" jdbcType="VARCHAR"/>
+        <result column="ROW_NUM" property="rowNum" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <resultMap type="com.hp.temip.alb_gui.domain.AlarmIdentifierGridObject" id="alarmIdentifierGrid">
+        <result column="PROFILE_ID" property="profileId" jdbcType="VARCHAR"/>
+        <result column="EVENT_ID" property="eventId" jdbcType="VARCHAR"/>
+        <result column="VARIABLES" property="variables" jdbcType="CLOB"/>
+        <result column="SHOW_ALARM" property="showAlarm" jdbcType="VARCHAR"/>
+        <result column="DATABASE_TABLE" property="databaseTable" jdbcType="VARCHAR"/>
+        <result column="DATABASE_ACCESS" property="databaseAccess" jdbcType="VARCHAR"/>
+        <result column="TABLE_COLUMNS" property="tableColumns" jdbcType="VARCHAR"/>
+        <result column="ADDITIONAL_TEXT" property="additionalText" jdbcType="CLOB"/>
+        <result column="PROBABLE_CAUSE" property="probableCause" jdbcType="VARCHAR"/>
+        <result column="PERCEIVED_SEVERITY" property="perceivedSeverity" jdbcType="VARCHAR"/>
+        <result column="ALARM_TYPE" property="alarmType" jdbcType="VARCHAR"/>
+        <result column="USERTEXT" property="userText" jdbcType="VARCHAR"/>
+        <result column="LABEL1" property="label1" jdbcType="VARCHAR"/>
+        <result column="LABEL2" property="label2" jdbcType="VARCHAR"/>
+        <result column="LABEL3" property="label3" jdbcType="VARCHAR"/>
+        <result column="LABEL4" property="label4" jdbcType="VARCHAR"/>
+        <result column="LABEL5" property="label5" jdbcType="VARCHAR"/>
+        <result column="LABEL6" property="label6" jdbcType="VARCHAR"/>
+        <result column="LABEL7" property="label7" jdbcType="VARCHAR"/>
+        <result column="LABEL8" property="label8" jdbcType="VARCHAR"/>
+        <result column="LABEL9" property="label9" jdbcType="VARCHAR"/>
+        <result column="LABEL10" property="label10" jdbcType="VARCHAR"/>
+        <result column="ALB_VERSION" property="albVersion" jdbcType="INTEGER"/>
+        <result column="ALB_USER" property="albUser" jdbcType="VARCHAR"/>
+        <result column="DATE_CREATED" property="dateCreated" jdbcType="VARCHAR"/>
+        <result column="ROW_NUM" property="rowNum" jdbcType="INTEGER"/>
+    </resultMap>
+
+
+    <select id="getProfileList" resultMap="profileGrid">
+      SELECT a.PROFILE_ID,
+          a.ALB_VERSION,
+          a.ALB_USER,
+          a.DATE_CREATED,
+          c.HOST_NAME,
+          b.TRANSLATE_STATUS,
+          b.DEPLOY_STATUS,
+          c.HOST_ID,
+          b.LAST_TRANSLATE,
+          b.LAST_DEPLOY
+      FROM ALB_PROFILETABLE a,
+       ALB_PROFILE_HOST b, ALB_HOST c
+        where
+                a.PROFILE_ID = b.PROFILE_ID AND
+                a.ALB_VERSION = b.ALB_VERSION AND
+                c.HOST_ID = b.HOST_ID AND
+                c.ENABLED = 1
+      ORDER BY a.PROFILE_ID, a.ALB_VERSION
+    </select>
+
+    <select id="getProfileListVersionFilter" resultMap="profileGrid">
+    SELECT a.PROFILE_ID,
+          a.ALB_VERSION,
+          a.ALB_USER,
+          a.DATE_CREATED,
+          c.HOST_NAME,
+          b.TRANSLATE_STATUS,
+          b.DEPLOY_STATUS,
+          c.HOST_ID,
+          b.LAST_TRANSLATE,
+          b.LAST_DEPLOY
+      FROM ALB_PROFILETABLE a,
+       ALB_PROFILE_HOST b, ALB_HOST c,
+       (SELECT PROFILE_ID,  max(ALB_VERSION) as alb_version
+       FROM ALB_PROFILE_HOST group by profile_id) d
+        where
+                a.PROFILE_ID = b.PROFILE_ID AND
+                a.ALB_VERSION = b.ALB_VERSION AND
+                c.HOST_ID = b.HOST_ID AND
+                a.PROFILE_ID = d.PROFILE_ID AND
+                a.ALB_VERSION = d.ALB_VERSION AND
+                c.ENABLED = 1
+      ORDER BY a.PROFILE_ID, a.ALB_VERSION
+    </select>
+
+    <select id="getSingleProfile" resultMap="profileGrid" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+      SELECT a.PROFILE_ID,
+          a.DATE_CREATED,
+          a.ALB_VERSION,
+          a.ALB_USER,
+          a.PROFILE_ALARM_PROCESSING,
+          a.CTRL_FILE_PARAMETER_EXTRACTION,
+          a.CTRL_FILE_ALARM_IDENTIFIER,
+          a.CUSTOM_FIELDS
+        FROM ALB_PROFILETABLE a
+        WHERE a.PROFILE_ID = #{profileId} and a.ALB_VERSION = #{albVersion}
+    </select>
+
+    <select id="getTopAlbVersion" resultType="long" parameterType="String">
+      SELECT  MAX(ALB_VERSION)
+        FROM ALB_PROFILETABLE a
+        WHERE a.PROFILE_ID = #{profileId}
+    </select>
+
+    <select id="checkProfileExists" resultMap="profileGrid" parameterType="String">
+      SELECT *
+        FROM ALB_PROFILETABLE a
+        WHERE a.PROFILE_ID = #{profileId}
+    </select>
+
+    <!--TODO -->
+    <update id="updateProfileTranslateStatus" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        UPDATE ALB_PROFILE_HOST a set a.TRANSLATE_STATUS = #{translateStatus} WHERE a.PROFILE_ID = #{profileId} and a.ALB_VERSION = #{albVersion} and a.HOST_ID = #{hostId}
+    </update>
+
+    <update id="updateProfileDeployStatus" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        UPDATE ALB_PROFILE_HOST a set a.DEPLOY_STATUS = #{deployStatus} WHERE a.PROFILE_ID = #{profileId} and a.ALB_VERSION = #{albVersion} and a.HOST_ID = #{hostId}
+    </update>
+
+    <insert id="insertNewProfile" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        INSERT INTO ALB_PROFILETABLE (PROFILE_ID, PROFILE_ALARM_PROCESSING, CTRL_FILE_PARAMETER_EXTRACTION, CTRL_FILE_ALARM_IDENTIFIER,
+         CUSTOM_FIELDS, ALB_VERSION, ALB_USER, DATE_CREATED)
+        VALUES (#{profileId}, #{profileAlarmProcessing}, #{controlFileParameterExtraction}, #{controlFileAlarmIdentifier},
+        #{customFields}, #{albVersion}, #{albUser}, #{dateCreated})
+    </insert>
+
+    <delete id="removeProfile" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        DELETE FROM ALB_PROFILETABLE WHERE PROFILE_ID = #{profileId} AND ALB_VERSION = #{albVersion}
+    </delete>
+
+    <delete id="removeSelectionControl" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        DELETE FROM ALB_SELCTRL WHERE PROFILE_ID = #{profileId} AND ALB_VERSION = #{albVersion}
+    </delete>
+
+    <delete id="removeParameterExtraction" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        DELETE FROM ALB_PARAMEXTRACT WHERE PROFILE_ID = #{profileId} AND ALB_VERSION = #{albVersion}
+    </delete>
+
+    <delete id="removeAlarmIdentifier" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        DELETE FROM ALB_ALARMIDENTIFIER WHERE PROFILE_ID = #{profileId} AND ALB_VERSION = #{albVersion}
+    </delete>
+
+<!--This one for the plain delete the whole profile which will be coded later-->
+    <!--<delete id="removeProfileHost" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">-->
+        <!--DELETE FROM ALB_PROFILE_HOST WHERE PROFILE_ID = #{profileId} AND ALB_VERSION = #{albVersion} AND HOST_ID = #{hostId}-->
+    <!--</delete>-->
+
+    <delete id="removeProfileHost" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        DELETE FROM ALB_PROFILE_HOST WHERE PROFILE_ID = #{profileId} AND ALB_VERSION = #{albVersion} AND HOST_ID = #{hostId}
+    </delete>
+
+    <select id="getSelectionControl" resultMap="selectionControlGrid" parameterType="com.hp.temip.alb_gui.domain.SelectionControlGridObject">
+      SELECT
+          b.PROFILE_ID,
+          b.ACCESS_MODULE,
+          b.GLOBAL_CLASS,
+          b.DOMAINS,
+          b.NODE_NAME,
+          b.SUBCLASS,
+          b.ORIGINAL_ALARM_REMAIN,
+          b.MANAGED_OBJECT_DISCRIMINATOR,
+          b.ALB_VERSION,
+          b.ALB_USER,
+          b.DATE_CREATED
+        FROM ALB_SELCTRL b
+        WHERE b.PROFILE_ID = #{profileId} and b.ALB_VERSION = #{albVersion}
+    </select>
+
+    <!--<update id="updateSelectionControl" parameterType="com.hp.temip.alb_gui.domain.SelectionControlGridObject">-->
+        <!--UPDATE ALB_SELCTRL b set b.ACCESS_MODULE = #{accessModule}, b.GLOBAL_CLASS = #{globalClass},-->
+        <!--b.DOMAINS = #{domains}, b.NODE_NAME = #{nodeName}, b.SUBCLASS = #{subclass}, b.ORIGINAL_ALARM_REMAIN = #{originalAlarmRemain},-->
+        <!--b.MANAGED_OBJECT_DISCRIMINATOR = #{managedObjectDiscriminator}, b.ALB_VERSION = #{albVersion},-->
+        <!--b.ALB_USER = #{albUser} WHERE b.PROFILE_ID = #{profileId}-->
+    <!--</update>-->
+
+
+    <insert id="insertNewSelectionControl" parameterType="com.hp.temip.alb_gui.domain.SelectionControlGridObject">
+        INSERT INTO ALB_SELCTRL (PROFILE_ID, ACCESS_MODULE, GLOBAL_CLASS, DOMAINS, NODE_NAME, SUBCLASS, ORIGINAL_ALARM_REMAIN,
+        MANAGED_OBJECT_DISCRIMINATOR, ALB_VERSION, ALB_USER, DATE_CREATED)
+        VALUES (#{profileId}, #{accessModule}, #{globalClass}, #{domains},
+        #{nodeName}, #{subclass}, #{originalAlarmRemain}, #{managedObjectDiscriminator}, #{albVersion}, #{albUser}, #{dateCreated})
+    </insert>
+
+    <select id="getParameterExtract" resultMap="parameterExtractGrid" parameterType="com.hp.temip.alb_gui.domain.ParameterExtractGridObject">
+      SELECT
+          pe.PROFILE_ID,
+          pe.TARGET_ALARM_PARAMETER,
+          NVL(pe.SOURCE_ALARM_PARAMETER, ' ') as sourceAlarmParameter,
+          NVL(pe.KEYWORD, ' ') as keyword,
+          NVL(pe.EXTRACT_AFTER_KEYWORD, ' ') as extractAfterKeyword,
+          NVL(pe.POST_PROCESSING, ' ') as postProcessing,
+          pe.ALB_VERSION,
+          pe.ALB_USER,
+          pe.DATE_CREATED,
+          pe.ROW_NUM
+        FROM ALB_PARAMEXTRACT pe
+        WHERE pe.PROFILE_ID = #{profileId} and pe.ALB_VERSION = #{albVersion}
+        ORDER BY pe.ROW_NUM
+    </select>
+
+    <insert id="insertNewParameterExtract" parameterType="com.hp.temip.alb_gui.domain.ParameterExtractGridObject">
+        INSERT INTO ALB_PARAMEXTRACT (PROFILE_ID, TARGET_ALARM_PARAMETER, SOURCE_ALARM_PARAMETER, KEYWORD, EXTRACT_AFTER_KEYWORD, POST_PROCESSING,
+        ALB_VERSION, ALB_USER, DATE_CREATED, ROW_NUM)
+        VALUES (#{profileId}, #{targetAlarmParameter}, #{sourceAlarmParameter}, #{keyword}, #{extractAfterKeyword}, #{postProcessing},
+        #{albVersion}, #{albUser}, #{dateCreated}, #{rowNum})
+    </insert>
+
+
+    <select id="getAlarmIdentifier" resultMap="alarmIdentifierGrid" parameterType="com.hp.temip.alb_gui.domain.AlarmIdentifierGridObject">
+    SELECT
+           ai.PROFILE_ID,
+           ai.EVENT_ID,
+           NVL(ai.VARIABLES,' ') as variables,
+           NVL(ai.SHOW_ALARM, ' ') as showAlarm,
+           NVL(ai.DATABASE_TABLE,' ') as databaseTable,
+           NVL(ai.DATABASE_ACCESS,' ') as databaseAccess,
+           NVL(ai.TABLE_COLUMNS,' ') as tableColumns,
+           NVL(ai.ADDITIONAL_TEXT,' ') as additionalText,
+           NVL(ai.PROBABLE_CAUSE,' ') as probableCause,
+           NVL(ai.PERCEIVED_SEVERITY,' ') as perceivedSeverity,
+           NVL(ai.ALARM_TYPE,' ') as alarmType,
+           NVL(ai.USERTEXT,' ') as userText,
+           NVL(ai.LABEL1,' ') as label1,
+           NVL(ai.LABEL2,' ') as label2,
+           NVL(ai.LABEL3,' ') as label3,
+           NVL(ai.LABEL4,' ') as label4,
+           NVL(ai.LABEL5,' ') as label5,
+           NVL(ai.LABEL6,' ') as label6,
+           NVL(ai.LABEL7,' ') as label7,
+           NVL(ai.LABEL8,' ') as label8,
+           NVL(ai.LABEL9,' ') as label9,
+           NVL(ai.LABEL10,' ') as label10,
+           ai.ALB_VERSION,
+           ai.ALB_USER,
+           ai.DATE_CREATED,
+           ai.ROW_NUM
+       FROM ALB_ALARMIDENTIFIER ai
+        WHERE ai.PROFILE_ID = #{profileId} and ai.ALB_VERSION = #{albVersion}
+        ORDER BY ai.ROW_NUM
+    </select>
+
+    <insert id="insertNewAlarmIdentifier" parameterType="com.hp.temip.alb_gui.domain.AlarmIdentifierGridObject">
+    INSERT INTO ALB_ALARMIDENTIFIER(PROFILE_ID, EVENT_ID, VARIABLES, SHOW_ALARM, DATABASE_TABLE, DATABASE_ACCESS, TABLE_COLUMNS, ADDITIONAL_TEXT,
+    PROBABLE_CAUSE, PERCEIVED_SEVERITY, ALARM_TYPE, USERTEXT, LABEL1, LABEL2, LABEL3, LABEL4, LABEL5, LABEL6, LABEL7, LABEL8, LABEL9,
+    LABEL10, ALB_VERSION, ALB_USER, DATE_CREATED, ROW_NUM)
+    VALUES (#{profileId}, #{eventId}, #{variables}, #{showAlarm}, #{databaseTable}, #{databaseAccess}, #{tableColumns},
+    #{additionalText}, #{probableCause}, #{perceivedSeverity}, #{alarmType}, #{userText},
+    #{label1}, #{label2}, #{label3}, #{label4}, #{label5}, #{label6}, #{label7}, #{label8}, #{label9}, #{label10},
+    #{albVersion}, #{albUser}, #{dateCreated}, #{rowNum})
+    </insert>
+
+
+
+    <insert id="insertProfileHost" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        INSERT INTO ALB_PROFILE_HOST (PROFILE_ID, HOST_ID, TRANSLATE_STATUS, DEPLOY_STATUS, LAST_TRANSLATE, LAST_DEPLOY,
+        ALB_VERSION)
+        VALUES (#{profileId}, #{hostId}, #{translateStatus}, #{deployStatus}, #{lastTranslate}, #{lastDeploy},
+        #{albVersion})
+    </insert>
+
+
+
+
+
+
+</mapper>

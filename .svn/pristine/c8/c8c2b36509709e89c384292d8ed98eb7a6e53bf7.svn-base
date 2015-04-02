@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hp.temip.alb_gui.dao.UserAccessAuditMapper">
+    <resultMap type="com.hp.temip.alb_gui.domain.UserAccessAudit" id="userAccessAudit">
+        <result column="USER_ID" property="userId" jdbcType="VARCHAR"/>
+        <result column="DATE_TIME" property="dateTime" jdbcType="VARCHAR"/>
+        <result column="ACTION_TYPE" property="actionType" jdbcType="VARCHAR"/>
+        <result column="SESSION_ID" property="sessionId" jdbcType="VARCHAR"/>
+
+
+        <association property="user" column="USERNAME" javaType="com.hp.temip.alb_gui.domain.User">
+            <result column="NAME" property="name" jdbcType="VARCHAR" />
+            <result column="DEPT" property="dept" jdbcType="VARCHAR" />
+        </association>
+    </resultMap>
+
+    <resultMap id="userAccessAuditChart" type="com.hp.temip.alb_gui.domain.UserAccessAuditChart">
+        <result column="TIME" property="time" jdbcType="VARCHAR"/>
+        <result column="SET_DATA_1" property="dataSet1" jdbcType="VARCHAR"/>
+        <result column="SET_DATA_2" property="dataSet2" jdbcType="VARCHAR"/>
+        <result column="SET_DATA_3" property="dataSet3" jdbcType="VARCHAR"/>
+        <result column="SET_DATA_4" property="dataSet4" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <insert id="insertAudit" parameterType="com.hp.temip.alb_gui.domain.UserAccessAudit">
+      INSERT INTO USER_ACCESS_AUDIT (USER_ID,DATE_TIME,ACTION_TYPE,SESSION_ID) VALUES (#{userId}, SYSDATE, #{actionType}, #{sessionId})
+    </insert>
+
+    <select id="getUserAccessList" resultMap="userAccessAudit">
+        SELECT a.user_id                           AS USER_ID,
+          a.session_id                             AS SESSION_ID,
+          TO_CHAR(a.DATE_TIME, 'YYYY-MM-DD HH:MI:SS')  AS DATE_TIME,
+          a.ACTION_TYPE AS ACTION_TYPE,
+          b.name                                   AS NAME,
+          b.dept                                   AS DEPT,
+          b.username                               AS USERNAME
+        FROM USER_ACCESS_AUDIT a
+        LEFT OUTER JOIN USERS b
+        ON a.USER_ID    = b.USERNAME
+        WHERE a.ACTION_TYPE IS NOT NULL
+        ORDER BY TO_CHAR(a.DATE_TIME, 'YYYY-MM-DD HH:MI:SS') DESC
+    </select>
+
+    <select id="getUserAccessChartData" resultMap="userAccessAuditChart">
+         SELECT e.time as time,
+          NVL(e.set_data,0)  AS set_data_1,
+          NVL(e.set_data2,0) AS set_data_2,
+          NVL(e.set_data3,0) AS set_data_3,
+          NVL(f.set_data,0)  AS set_data_4
+        FROM
+          (SELECT c.time AS TIME,
+            c.set_data   AS set_data,
+            c.set_data2  AS set_data2,
+            d.set_data   AS set_data3
+          FROM
+            (SELECT a.time AS TIME,
+              a.set_data   AS set_data,
+              b.set_data   AS set_data2
+            FROM
+              (SELECT concat(TO_CHAR(login,'HH24'),'00') AS TIME,
+                COUNT(*)                                 AS set_data
+              FROM user_access_audit
+              WHERE login BETWEEN to_date(to_char(SYSDATE-3,'DD-Mon-YY')) AND to_date(to_char(SYSDATE,'DD-Mon-YY')) + (86399/86400)
+              GROUP BY concat(TO_CHAR(login,'HH24'),'00')
+              ORDER BY concat(TO_CHAR(login,'HH24'),'00')
+              ) a
+            LEFT JOIN
+              (SELECT concat(TO_CHAR(login,'HH24'),'00') AS TIME,
+                COUNT(*)                                 AS set_data
+              FROM user_access_audit
+              WHERE login BETWEEN to_date(to_char(SYSDATE-2,'DD-Mon-YY')) AND to_date(to_char(SYSDATE-1,'DD-Mon-YY')) + (86399/86400)
+              GROUP BY concat(TO_CHAR(login,'HH24'),'00')
+              ORDER BY concat(TO_CHAR(login,'HH24'),'00')
+              ) b
+            ON a.time = b.time
+            ) c
+          LEFT JOIN
+            (SELECT concat(TO_CHAR(login,'HH24'),'00') AS TIME,
+              COUNT(*)                                 AS set_data
+            FROM user_access_audit
+            WHERE login BETWEEN to_date(to_char(SYSDATE-1,'DD-Mon-YY')) AND to_date(to_char(SYSDATE-2,'DD-Mon-YY')) + (86399/86400)
+            GROUP BY concat(TO_CHAR(login,'HH24'),'00')
+            ORDER BY concat(TO_CHAR(login,'HH24'),'00')
+            ) d
+          ON c.time = d.time
+          ) e
+        LEFT JOIN
+          (SELECT concat(TO_CHAR(login,'HH24'),'00') AS TIME,
+            COUNT(*)                                 AS set_data
+          FROM user_access_audit
+          WHERE login BETWEEN to_date(to_char(SYSDATE,'DD-Mon-YY')) AND to_date(to_char(SYSDATE-3,'DD-Mon-YY')) + (86399/86400)
+          GROUP BY concat(TO_CHAR(login,'HH24'),'00')
+          ORDER BY concat(TO_CHAR(login,'HH24'),'00')
+          ) f
+        ON e.time = f.time
+        ORDER BY e.time
+    </select>
+
+
+
+
+</mapper>

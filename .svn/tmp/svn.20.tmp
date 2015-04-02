@@ -1,0 +1,5 @@
+script.inputdir=C:\\test
+script.outputdir=C:\\test
+script.install.filename=install.bat
+script.preview.filename=preview.bat
+

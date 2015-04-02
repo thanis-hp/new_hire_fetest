@@ -1,0 +1,55 @@
+function getUserAccessGrid() {
+
+    var userAccessGridStore = new Ext.data.JsonStore({
+        storeId:'AccessList',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getUserAccessList.htm',
+            reader:{
+                type:'json',
+                root:'accessList'
+            }
+        },
+
+        fields:['userId', 'strDateTime', 'actionType', 'sessionId', 'user.name', 'user.dept']
+    });
+
+    var userAccessGrid = Ext.create('Ext.grid.Panel', {
+        id:'userAccess-panel',
+        store:userAccessGridStore,
+        columns:[
+            Ext.create('Ext.grid.RowNumberer'),
+            {text:"User ID", flex:1, sortable:true, dataIndex:'userId'},
+            {text:"Name", flex:1, sortable:true, dataIndex:'user.name'},
+            {text:"Department", flex:1, sortable:true, dataIndex:'user.dept'},
+            {text:"Action Type", flex:1, sortable:true, dataIndex:'actionType'},
+            {text:"Date & Time", flex:1, sortable:true, dataIndex:'strDateTime', renderer: Ext.util.Format.dateRenderer('Y-m-d H:i:s')}
+        ],
+        columnLines:true,
+        collapsible:false,
+        title:'User Access Table',
+        iconCls:'icon-grid',
+        autoScroll:true,
+        tbar:[
+            {
+                xtype:'button',
+                iconCls: 'icon-refresh',
+                text:'Refresh',
+                handler:function () {
+                    userAccessGridStore.reload();
+                }
+            }
+        ],
+        listeners:{
+            activate: function(grid,eOpts) {
+                userAccessGridStore.reload();
+            }
+        }
+    });
+
+
+    return userAccessGrid;
+}
+
+

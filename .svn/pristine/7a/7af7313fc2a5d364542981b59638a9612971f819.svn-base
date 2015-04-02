@@ -1,0 +1,815 @@
+Ext.Loader.setConfig({enabled:true});
+
+function indexOfCustom(array, propertyName, value) {
+    for (var i = 0; i < array.length; i++) {
+        if (array[i][propertyName] === value)
+            return i;
+    }
+    return -1;
+}
+
+if (typeof String.prototype.startsWith != 'function') {
+    String.prototype.startsWith = function (str){
+        return this.slice(0, str.length) == str;
+    };
+}
+
+function indexOfCustomStr(array, propertyName, value) {
+    for (str in array) {
+    	for (var i = 0; i < array[str].length; i++) {
+    		if (array[str][i][propertyName] === value)
+                return str;
+    	}
+    	
+    }	
+    return -1;
+}
+
+function countIndex(array, propertyName, value) {
+    var count = 0;
+    for (var i = 0; i < array.length; i++) {
+        if (array[i][propertyName] === value)
+            count++;
+    }
+    return count;
+}
+
+if (!String.prototype.trim) {
+    String.prototype.trim = function () {
+        return this.replace(/(?:(?:^|\n)\s+|\s+(?:$|\n))/g, '').replace(/\s+/g, ' ');
+    }
+}
+
+function createNewLine(obj1, obj2, line, bg, linkId, group) {
+
+    if (obj1.line && obj1.from && obj1.to) {
+        line = obj1;
+        obj1 = line.from;
+        obj2 = line.to;
+    }
+
+    var bb1 = obj1, bb2 = obj2,
+        p = [
+            {x:bb1.x + bb1.width / 2, y:bb1.y - 1},
+            {x:bb1.x + bb1.width / 2, y:bb1.y + bb1.height + 1},
+            {x:bb1.x - 1, y:bb1.y + bb1.height / 2},
+            {x:bb1.x + bb1.width + 1, y:bb1.y + bb1.height / 2},
+            {x:bb2.x + bb2.width / 2, y:bb2.y - 1},
+            {x:bb2.x + bb2.width / 2, y:bb2.y + bb2.height + 1},
+            {x:bb2.x - 1, y:bb2.y + bb2.height / 2},
+            {x:bb2.x + bb2.width + 1, y:bb2.y + bb2.height / 2}
+        ],
+        d = {}, dis = [];
+
+    for (var i = 0; i < 4; i++) {
+        for (var j = 4; j < 8; j++) {
+            var dx = Math.abs(p[i].x - p[j].x),
+                dy = Math.abs(p[i].y - p[j].y);
+            if ((i == j - 4) || (((i != 3 && j != 6) || p[i].x < p[j].x) && ((i != 2 && j != 7) || p[i].x > p[j].x) && ((i != 0 && j != 5) || p[i].y > p[j].y) && ((i != 1 && j != 4) || p[i].y < p[j].y))) {
+                dis.push(dx + dy);
+                d[dis[dis.length - 1]] = [i, j];
+            }
+        }
+    }
+
+    if (dis.length == 0) {
+        var res = [0, 4];
+    } else {
+        res = d[Math.min.apply(Math, dis)];
+    }
+
+    var x1 = p[res[0]].x,
+        y1 = p[res[0]].y,
+        x4 = p[res[1]].x,
+        y4 = p[res[1]].y;
+
+    dx = Math.max(Math.abs(x1 - x4) / 2, 10);
+    dy = Math.max(Math.abs(y1 - y4) / 2, 10);
+
+    var x2 = [x1, x1, x1 - dx, x1 + dx][res[0]].toFixed(3),
+        y2 = [y1 - dy, y1 + dy, y1, y1][res[0]].toFixed(3),
+        x3 = [0, 0, 0, 0, x4, x4, x4 - dx, x4 + dx][res[1]].toFixed(3),
+        y3 = [0, 0, 0, 0, y1 + dy, y1 - dy, y4, y4][res[1]].toFixed(3);
+
+    var path = ["M", x1.toFixed(3), y1.toFixed(3), "C", x2, y2, x3, y3, x4.toFixed(3), y4.toFixed(3)].join(",");
+    var color = typeof line == "string" ? line : "#000";
+
+    return {
+        id:linkId,
+        type:"path",
+        path:path,
+        stroke:color,
+        fill:"none",
+        "stroke-dasharray":bg.split("|")[2] || "-.",
+        "stroke-width":bg.split("|")[1] || 3,
+        group :group
+    };
+}
+
+function createMultiCastLine(obj1, obj2, line, bg, linkId, primary) {
+
+    var bb1 = obj1, bb2 = obj2,
+        p = [
+            {x:bb1.x + bb1.width / 2, y:bb1.y - 1},
+            //0 top middle
+            {x:bb1.x + bb1.width / 2, y:bb1.y + bb1.height + 1},
+            //1 bottom middle
+            {x:bb1.x - 1, y:bb1.y + bb1.height / 2},
+            //2 middle left
+            {x:bb1.x + bb1.width + 1, y:bb1.y + bb1.height / 2},
+            //3 middle right
+            {x:bb2.x + bb2.width / 2, y:bb2.y - 1},
+            //4 top middle
+            {x:bb2.x + bb2.width / 2, y:bb2.y + bb2.height + 1},
+            //5 bottom middle
+            {x:bb2.x - 1, y:bb2.y + bb2.height / 2},
+            //6 middle left
+            {x:bb2.x + bb2.width + 1, y:bb2.y + bb2.height / 2}
+            //7 middle right
+        ];
+
+    var i = 0, j = 0, z = 0;
+
+    if (primary && bb1.y > bb2.y) {
+        i = 0;
+        j = 4;
+        z = -15
+    } else {
+        i = 1;
+        j = 5;
+        z = 15
+    }
+
+    var path = ["M", p[i].x, p[i].y, "L", p[i].x, p[j].y + z, "L",
+        p[j].x, p[j].y + z, "L", p[j].x, p[j].y].join(",");
+
+
+    if (!primary && bb1.y > bb2.y) {
+        i = 1;
+        j = 7;
+        z = bb1.height*2+30;
+        path = ["M", p[i].x, p[i].y, "L", p[i].x, p[j].y + z, "L",
+            p[j].x+25, p[j].y + z, "L", p[j].x+25, p[j].y, "L", p[j].x, p[j].y].join(",");
+    }
+
+    var color = typeof line == "string" ? line : "#000";
+    return {id:linkId, type:"path", path:path, stroke:color, fill:"none", "stroke-dasharray":bg.split("|")[2] || "-.","stroke-width":bg.split("|")[1] || 3,group :'link_object'};
+}
+
+function drawCloud(x, y, id) {
+
+    var path = ["M", x, y,
+        "C", x - 18.30444, y - 4.90469, x - 36.82842, y + 0.70825, x - 49.61647, y + 12.90201,
+        "C", x - 56.2977, y + 4.87121, x - 65.34446, y - 1.32692, x - 76.19565, y - 4.2343,
+        "C", x - 104.12234, y - 11.71709, x - 132.8918, y + 4.89285, x - 140.37479, y + 32.81961,
+        "C", x - 140.92466, y + 34.87168, x - 141.06942, y + 36.93524, x - 141.36431, y + 38.98765,
+        "C", x - 166.51367, y + 36.37337, x - 190.57763, y + 52.11752, x - 197.32895, y + 77.31404,
+        "C", x - 204.01856, y + 102.28, x - 191.39491, y + 127.8085, x - 168.70591, y + 138.30483,
+        "C", x - 169.93924, y + 140.97928, x - 171.08918, y + 143.73453, x - 171.87701, y + 146.67437,
+        "C", x - 179.35987, y + 174.60113, x - 162.7333, y + 203.30882, x - 134.80654, y + 210.79161,
+        "C", x - 121.12795, y + 214.45727, x - 107.3046, y + 212.3048, x - 95.82957, y + 205.91532,
+        "C", x - 89.50538, y + 219.44479, x - 77.71422, y + 230.33395, x - 62.17054, y + 234.4986,
+        "C", x - 39.99303, y + 240.44115, x - 17.48848, y + 231.02766, x - 5.33877, y + 212.98499,
+        "C", x - 0.41724, y + 216.46911, x + 5.05326, y + 219.35114, x + 11.21549, y + 221.0026,
+        "C", x + 39.14218, y + 228.48539, x + 67.84977, y + 211.85855, x + 75.33276, y + 183.93179,
+        "C", x + 79.09563, y + 169.8888, x + 76.76729, y + 155.67745, x + 69.97473, y + 144.03034,
+        "C", x + 76.69714, y + 137.62024, x + 81.95913, y + 129.50053, x + 84.53733, y + 119.87845,
+        "C", x + 92.02029, y + 91.95136, x + 75.39368, y + 63.24367, x + 47.467, y + 55.76088,
+        "C", x + 44.52719, y + 54.97352, x + 41.58242, y + 54.52997, x + 38.65036, y + 54.26087,
+        "C", x + 40.38816, y + 29.73677, x + 24.62647, y + 6.59874, x, y, "z"].join(",");
+    return {id:id, type:"path", path:path, stroke:'#04B4AE', fill:"#A9F5F2", "stroke-width":1};
+}
+
+function createDataTopo(json_topology, borderPath, _2leg, subscriberDetail) {
+
+    var node_type, nodes, node_x = 30, node_y = 60, i = j = 0;
+    var drawSprites = [], skip = false;
+    var obj = json_topology;
+    deviceIp = '';
+    if (!_2leg) {
+        drawSprites.push(drawCloud(660, 50, 'cloud_1'));
+        cpuKpiArr = new Array();
+        utilzKpiArr = new Array();
+        drawSprites.push({ type:"text", text:'Subscriber: ' + obj.subscriber, x:15, y:15, 'text-anchor':"left", font: "12px century gothic", group: 'text_group' });
+    } else {
+        drawSprites.push(drawCloud(660, 350, 'cloud_2'));
+        drawSprites.push({ type:"text", text:'Subscriber: ' + obj.subscriber, x:15, y:315, 'text-anchor':"left", font: "12px century gothic" });
+    }
+
+    var link_fill_color = '#BDBDBD', link_stroke_color = '#585858';
+
+    for (node_type in obj.nodes) {
+        if ((!is2leg) && (node_type == 'OLT'))
+            isIPMSAN = false;
+        else if ((!is2leg) && (node_type == 'IPMSAN')){
+            isIPMSAN = true;
+        }
+
+        if (obj.nodes[node_type].length > 2) {
+            node_y = 20;
+        }
+
+        if (_2leg){node_y += 300; i = linkArray.length}
+
+        for (nodes in obj.nodes[node_type]) {
+            var node_id = obj.nodes[node_type][nodes].node_name,
+                node_ip = obj.nodes[node_type][nodes].node_ip != undefined ? obj.nodes[node_type][nodes].node_ip : '',
+                parent_id = obj.nodes[node_type][nodes].parent_node,
+                type = obj.nodes[node_type][nodes].type,
+                node_name = node_id;
+
+            if ((isIPMSAN) && (obj.nodes[node_type][nodes].primary == 1) && (node_type == 'NPE')){
+                deviceIp =  obj.nodes[node_type][nodes].parent_ip;
+            }
+
+            var tipText = '';
+
+            if(_2leg){
+                node_id = node_id + '_2';
+                parent_id = parent_id != undefined ? parent_id + '_2': undefined;
+            }
+
+            if (indexOfCustom(drawSprites, "id", node_id) == -1) {
+
+                drawSprites.push(createNetworkNode(node_id, node_x, node_y, 'node_object', node_type));
+                drawSprites.push(createNodeText(node_name, node_type, node_ip, node_x, node_y));
+
+                if(node_type == 'IPSC'){
+                    drawSprites.push({
+                        id: node_id + 'ipsc_icon',
+                        width:32,
+                        height:24,
+                        x:node_x+80-16,
+                        y:node_y-12,
+                        type: "image",
+                        src: 'images/ipsc.png'
+                    });
+
+                }
+
+                if(node_type == 'NPE'){
+                    drawSprites.push({
+                        id: node_id + 'npe_icon',
+                        width:32,
+                        height:42,
+                        x:node_x+80-16,
+                        y:node_y-24,
+                        type: "image",
+                        src: 'images/npe.png'
+                    });
+
+                }
+
+                if(node_type == 'BRAS'){
+                    drawSprites.push({
+                        id: node_id + 'bras_icon',
+                        width:32,
+                        height:28,
+                        x:node_x+80-20,
+                        y:node_y-14,
+                        type: "image",
+                        src: 'images/bras.png'
+                    });
+
+                }
+
+                if(node_type == 'MSE'){
+                    drawSprites.push({
+                        id: node_id + 'mse_icon',
+                        width:32,
+                        height:21,
+                        x:node_x+80-16,
+                        y:node_y-10,
+                        type: "image",
+                        src: 'images/mse.png'
+                    });
+
+                }
+
+                cpuKpiArr.push({ id:node_id + "_cpu", x:node_x, y:node_y});
+                utilzKpiArr.push({ id:node_id + "_utilz", x:node_x, y:node_y});
+
+                if (parent_id != undefined){
+                    tipText = 'NODE NAME: ' + node_name + '</br>' +
+                        'NODE IP: ' + node_ip + '</br>' +
+                        'CARD: ' + obj.nodes[node_type][nodes].card_slot + '</br>' +
+                        'PORT: ' + obj.nodes[node_type][nodes].port + '</br>' + '</br>' +
+                        'PARENT_ID: ' + parent_id + '</br>' +
+                        'PARENT CARD: ' + obj.nodes[node_type][nodes].parent_card_slot + '</br>' +
+                        'PARENT PORT: ' + obj.nodes[node_type][nodes].parent_port + '</br>'+
+                        'PARENT VLAN: ' + obj.nodes[node_type][nodes].parent_vlan + '</br>';
+                } else if(node_type == 'OLT' || node_type == 'IPMSAN'){
+
+                    tipText = 'NODE NAME: ' + node_name + '</br>' +
+                        'Subscriber Id: ' + subscriberDetail[0] + '</br>' +
+                        'Service Name: ' + subscriberDetail[1] + '</br>' +
+                        'Service Port: ' + subscriberDetail[2] + '</br>' +
+                        'Service Type: ' + subscriberDetail[3] + '</br>' +
+                        'Service: ' + subscriberDetail[4] + '</br>';
+
+                } else {
+                    tipText = 'NODE NAME: ' + node_name + '</br>' +
+                        'NODE IP: ' + node_ip + '</br>' +
+                        'CARD: ' + obj.nodes[node_type][nodes].card_slot + '</br>' +
+                        'PORT: ' + obj.nodes[node_type][nodes].port + '</br>' + '</br>';
+                }
+
+                nodeDetailArr.push({
+                    //id: node_id + "_tip",
+                    title: 'Node Detail',
+                    autoHide:true,
+                    closable: false,
+                    target:node_id,
+                    trackMouse:true,
+                    hideDelay:10,
+                    shadow: false,
+                    html: tipText
+
+                });
+
+                skip = false;
+            } else skip = true;
+
+
+            if (parent_id != undefined) {
+                var linkId = 'link' + j;
+                linkId = _2leg ? linkId + '_2' : linkId;
+
+                var obj1 = drawSprites[indexOfCustom(drawSprites, "id", parent_id)];
+                var obj2 = drawSprites[indexOfCustom(drawSprites, "id", node_id)];
+                if (type == undefined) {
+                    if (obj.nodes[node_type][nodes].primary == undefined
+                        || obj.nodes[node_type][nodes].primary == 1) {
+                        drawSprites.push(createNewLine(obj1, obj2, link_fill_color, link_stroke_color + "|5", linkId, 'link_object'));
+                    } else if (obj.nodes[node_type][nodes].primary == 0) {
+                        drawSprites.push(createNewLine(obj1, obj2, "#6E6E6E", link_stroke_color + "|5|. ", linkId, 'link_object'));
+                    }
+                } else if (type == "multicast") {
+
+                    if (obj.nodes[node_type][nodes].primary == 1) {
+                        drawSprites.push(createMultiCastLine(obj1, obj2, link_fill_color, link_stroke_color + "|5", linkId, true));
+                        //console.log("multicast primary", obj.nodes[node_type][nodes].primary);
+                    } else {
+                        drawSprites.push(createMultiCastLine(obj1, obj2, "#6E6E6E", link_stroke_color + "|5|. ", linkId, false));
+                    }
+                }
+                j++;
+
+                linkArray [i] = new Array(5);
+                linkArray [i][0] = linkId;
+                linkArray [i][1] = parent_id + ":" + (obj.nodes[node_type][nodes].parent_card_slot != undefined ? obj.nodes[node_type][nodes].parent_card_slot : 'NA') + ":" + (obj.nodes[node_type][nodes].parent_port != undefined ? obj.nodes[node_type][nodes].parent_port : 'NA');
+                linkArray [i][2] = node_id + ":" + (obj.nodes[node_type][nodes].card_slot != undefined ? obj.nodes[node_type][nodes].card_slot : 'NA') + ":" + (obj.nodes[node_type][nodes].port != undefined ? obj.nodes[node_type][nodes].port : 'NA');
+                linkArray [i][3] = '0';
+                linkArray [i][4] = '0';
+                linkArray [i][5] = '0';
+                i++;
+            }
+            if (!skip) node_y += (280 / (obj.nodes[node_type].length - countIndex(obj.nodes[node_type], "type", "multicast")));
+        }
+
+        node_x += 110;
+        node_y = 60;
+    }
+
+    node_x += 100;
+    if(!_2leg)
+        borderArr = new Array();
+
+    /*******************************Border Path Creation Starts***************************************************************/
+    
+   for (node_type in borderPath.nodes) {
+	    node_y = 130;
+        if ((node_type == 'IGW') || (node_type == 'IPTV')){
+            node_x += 90;
+        }
+        if (node_type == 'RTHW'){
+            node_x += 160;
+        }
+        if (_2leg){ node_y += 300; }
+        
+        var ptr;
+        for (nodes in borderPath.nodes[node_type]) {
+            node_id = borderPath.nodes[node_type][nodes].node_name;
+            node_ip = borderPath.nodes[node_type][nodes].node_ip;
+            parent_id = borderPath.nodes[node_type][nodes].parent_node;
+            node_name = node_id;
+
+            if(_2leg){
+                node_id = node_id + '_2';
+                parent_id = parent_id != undefined ? parent_id + '_2': undefined;
+            }
+            
+            if (((parent_id != undefined ) && (node_type == 'MSE')) || (node_type == 'RTHW')){
+        		ptr = parent_id;
+        		borderArr[ptr] = new Array();
+                if (!_2leg){
+                    kpi_x1 = node_x;
+                    kpi_y1 = node_y;
+                }else {
+                    kpi_x2 = node_x;
+                    kpi_y2 = node_y;
+                }
+
+
+
+
+        	}
+
+            if ((node_type == 'IGW') || (node_type == 'IPTV')){
+            	ptr = indexOfCustomStr(borderArr, "id", parent_id) ;
+            }
+            
+            if (indexOfCustom(drawSprites, "id", node_id) == -1) {
+                var nodeGrpObj = _2leg ? 'vobb_border_node_object' : 'border_node_object' ;
+            	borderArr[ptr].push(createNetworkNode(node_id, node_x, node_y,'border_node_object', node_type));
+            	borderArr[ptr].push({ type:"text",text:node_type,x:node_x + 40,y:node_y + 15,'text-anchor':"middle",/*fill: "white",*/ font:"10px century gothic","group":nodeGrpObj});
+            	borderArr[ptr].push({ type:"text",text:node_name,x:node_x + 40,y:node_y + 25,'text-anchor':"middle",/*fill: "white",*/ font:"10px century gothic","group":nodeGrpObj});
+            	borderArr[ptr].push({ type:"text",text:node_ip,x:node_x + 40,y:node_y + 35,'text-anchor':"middle",/*fill: "white",*/ font:"10px century gothic","group":nodeGrpObj});
+
+                if(node_type == 'MSE'){
+                    borderArr[ptr].push({
+                        id: node_id + 'mse_icon',
+                        width:32,
+                        height:21,
+                        x:node_x+80-16,
+                        y:node_y-10,
+                        type: "image",
+                        src: 'images/mse.png',
+                        "group":nodeGrpObj
+                    });
+
+                } else {
+                    borderArr[ptr].push({
+                        id: node_id + 'gwy_icon',
+                        width:32,
+                        height:42,
+                        x:node_x+80-16,
+                        y:node_y-24,
+                        type: "image",
+                        src: 'images/gateway.png',
+                        "group":nodeGrpObj
+                    });
+
+                }
+
+
+
+                if (parent_id != undefined){
+                    tipText = 'NODE NAME: ' + node_name + '</br>' +
+                        'NODE IP: ' + node_ip + '</br>' +
+                        'PORT: ' + borderPath.nodes[node_type][nodes].port + '</br>' + '</br>' +
+                        'PARENT_ID: ' + parent_id + '</br>' +
+                        'PARENT PORT: ' + borderPath.nodes[node_type][nodes].parent_port + '</br>';
+                } else {
+                    tipText = 'NODE NAME: ' + node_name + '</br>' +
+                        'NODE IP: ' + node_ip + '</br>' +
+                        'PORT: ' + borderPath.nodes[node_type][nodes].port + '</br>' + '</br>';
+                }
+
+                borderDetailArr.push({
+                    //id: node_id + '_tip',
+                    title:'Node Detail',
+                    autoHide:true,
+                    closable: false,
+                    target:node_id,
+                    trackMouse:true,
+                    hideDelay:10,
+                    shadow: false,
+                    html: tipText
+
+                });
+
+                cpuKpiArr.push({ id:node_id + "_cpu", x:node_x, y:node_y});
+                utilzKpiArr.push({ id:node_id + "_utilz", x:node_x, y:node_y});
+
+
+            }
+
+            if (parent_id != undefined && node_type != 'MSE') {
+                linkId = 'link' + j;
+
+                linkId = _2leg ? linkId + '_2' : linkId;
+
+                if (node_type != 'RTHW') {
+                    obj1 = borderArr[indexOfCustomStr(borderArr, "id", parent_id)][indexOfCustom(borderArr[indexOfCustomStr(borderArr, "id", parent_id)], "id", parent_id)];
+                } else {
+                    obj1 = drawSprites[indexOfCustom(drawSprites, "id", parent_id)];
+                }
+                obj2 = borderArr[indexOfCustomStr(borderArr, "id", node_id)][indexOfCustom(borderArr[indexOfCustomStr(borderArr, "id", node_id)], "id", node_id)];
+                var linkGrpObj = _2leg ? 'vobb_border' : 'border' ;
+                borderArr[ptr].push(createNewLine(obj1, obj2, 'green', 'green' + "|5", linkGrpObj + linkId,'border_node_object'));
+                j++;
+                linkArray [i] = new Array(5);
+                linkArray [i][0] = linkId;
+                linkArray [i][1] = parent_id + ":" + (borderPath.nodes[node_type][nodes].parent_card_slot != undefined ? borderPath.nodes[node_type][nodes].parent_card_slot : 'NA') + ":" + (borderPath.nodes[node_type][nodes].parent_port != undefined ? borderPath.nodes[node_type][nodes].parent_port : 'NA');
+                linkArray [i][2] = node_id + ":" + (borderPath.nodes[node_type][nodes].card_slot != undefined ? borderPath.nodes[node_type][nodes].card_slot : 'NA') + ":" + (borderPath.nodes[node_type][nodes].port != undefined ? borderPath.nodes[node_type][nodes].port : 'NA');
+                linkArray [i][3] = '0';
+                linkArray [i][4] = '0';
+                linkArray [i][5] = '0';
+                i++;
+            }
+
+            //node_y += 300; // borderPath.nodes[node_type].length;
+
+            //break;
+
+        }
+
+        node_x += 80;
+        //node_y = 80;
+
+    }
+
+    /*******************************Border Path Creation Ends***************************************************************/
+
+   /* if(_2leg){
+        drawSprites.push({
+            id:'cloud_arrow',
+            width:180,
+            height:320,
+            x:node_x-100,
+            y:node_y-320,
+            type: "image",
+            src: 'images/cloud-with-arrow-1.png'
+        });
+
+    }*/
+
+    return drawSprites;
+}
+
+function createNodeText(node_id, node_type, node_ip, node_x, node_y) {
+	  return [
+        {
+            type:"text",
+            text:node_type,
+            x:node_x + 40,
+            y:node_y + 15,
+            'text-anchor':"middle",
+            //'font-size':"9"
+            //fill: "white",
+            font: "10px century gothic"
+        },
+        {
+            type:"text",
+            text:node_id,
+            x:node_x + 40,
+            y:node_y + 25,
+            'text-anchor':"middle",
+            //'font-size':"9"
+            //fill: "white",
+            font: "10px century gothic"
+        },
+        {
+            type:"text",
+            text:node_ip,
+            x:node_x + 40,
+            y:node_y + 35,
+            'text-anchor':"middle",
+            //'font-size':"9"
+            //fill: "white",
+            font: "10px century gothic"
+        }
+    ];
+}
+
+function createNetworkNode(node_id, node_x, node_y, groupId, node_type) {
+    var x_node_size = 80, y_node_size = 50;
+    var fill_color = '#BDBDBD', stroke_color = '#585858';
+
+    if(groupId.startsWith('border')){
+        fill_color = '#58FA58', stroke_color = '#088A29';
+    }
+    var icon = '';
+
+    if(node_type == 'OLT' || node_type == 'IPMSAN'){
+        icon = "images/mau.jpg";
+    }
+
+    if(node_type == 'NPE'){
+        icon = "images/route switch processor.jpg";
+    }
+    if(node_type == 'BRAS'){
+        icon = "images/hub.jpg";
+    }
+    if(node_type == 'IPSC'){
+        icon = "images/service control.jpg";
+    }
+    if(node_type == 'MSE'){
+        icon = "images/router.jpg";
+    }
+    if(node_type == 'RTHW'){
+        icon = "images/voice atm switch.jpg";
+    }
+    if(node_type == 'IGW'){
+        icon = "images/universal gateway.jpg";
+    }
+    if(node_type == 'IPTV'){
+        icon = "images/iptv server.jpg";
+    }
+
+    return {
+        id:node_id,
+        type:'rect',
+        width:x_node_size,
+        height:y_node_size,
+        x:node_x,
+        y:node_y,
+        radius:1,
+        fill:fill_color,
+        stroke:stroke_color,
+        "fill-opacity":100,
+        'stroke-width':1,
+        cursor:"hand",
+        listeners:  {
+				click: function(e,t,eOpts){
+                    selectedNode = e.id;
+                    //Ext.getCmp('selectedNodeId').setValue(e.id);
+                    //Ext.getCmp('nodeFieldSet').setTitle(e.id);
+                    //Ext.getCmp('nodeFieldSet').updateLayout();
+
+					for (index in linkArray){
+						if (selectedNode ==  linkArray[index][1].split(':')[0]){
+							selectedNodeStatus = linkArray[index][3];
+						} else if ( selectedNode == linkArray[index][2].split(':')[0]){
+							selectedNodeStatus = linkArray[index][4];
+	   				 	}
+					}
+					/*Ext.getCmp('selectedNodeStatus').setValue(selectedNodeStatus);
+					getLatestDesc(selectedNode,selectedNodeStatus);*/
+
+                    Ext.getCmp('topologyKBGrid').store.load({
+                        params: {equipName: selectedNode, status: selectedNodeStatus}
+                    });
+
+                    var strStatus = selectedNodeStatus == '1' ? 'MAJOR' : selectedNodeStatus == '2' ? 'CRITICAL' : 'NORMAL';
+                    Ext.getCmp('topologyKBGrid').setTitle("Knowledge Base - Equip Name: " +
+                        selectedNode + " with status " + strStatus);
+
+					loadAlarmGrid();
+
+			},
+            contextmenu:function(e,t,eOpts){
+                alert('');
+                e.preventDefault();
+                contextMenu.show(this.getEl());
+            }
+
+        },
+        group:groupId
+    };
+
+    /*return {
+        id:node_id,
+        width:x_node_size,
+        height:y_node_size,
+        x:node_x,
+        y:node_y,
+        type: "image",
+        src: icon,
+        listeners:  {
+				click: function(e,t,eOpts){
+                    selectedNode = e.id;
+                    //Ext.getCmp('selectedNodeId').setValue(e.id);
+                    //Ext.getCmp('nodeFieldSet').setTitle(e.id);
+                    //Ext.getCmp('nodeFieldSet').updateLayout();
+
+					for (index in linkArray){
+						if (selectedNode ==  linkArray[index][1].split(':')[0]){
+							selectedNodeStatus = linkArray[index][3];
+						} else if ( selectedNode == linkArray[index][2].split(':')[0]){
+							selectedNodeStatus = linkArray[index][4];
+	   				 	}
+					}
+					*//*Ext.getCmp('selectedNodeStatus').setValue(selectedNodeStatus);
+					getLatestDesc(selectedNode,selectedNodeStatus);*//*
+
+                    Ext.getCmp('topologyKBGrid').store.load({
+                        params: {equipName: selectedNode, status: selectedNodeStatus}
+                    });
+
+                    var strStatus = selectedNodeStatus == '1' ? 'MAJOR' : selectedNodeStatus == '2' ? 'CRITICAL' : 'NORMAL';
+                    Ext.getCmp('topologyKBGrid').setTitle("Knowledge Base - Equip Name: " +
+                        selectedNode + " with status " + strStatus);
+
+					loadAlarmGrid();
+
+			},
+            contextmenu:function(e,t,eOpts){
+                alert('');
+                e.preventDefault();
+                contextMenu.show(this.getEl());
+            }
+
+        },
+        group:groupId
+    };*/
+}
+
+
+
+
+/*
+ if (cpu_status != undefined) {
+ drawSprites.push({
+ id:node_id + "cpu",
+ type:'rect',
+ width:12,
+ height:10,
+ x:node_x + 2,
+ y:node_y - 11,
+ radius:1,
+ fill:fill_color,
+ stroke:stroke_color,
+ "fill-opacity":1,
+ 'stroke-width':3,
+ cursor:"hand"
+ }, {
+ id:node_id + "mem",
+ type:'rect',
+ width:12,
+ height:10,
+ x:node_x + 17,
+ y:node_y - 11,
+ radius:1,
+ fill:fill_color,
+ stroke:stroke_color,
+ "fill-opacity":1,
+ 'stroke-width':3,
+ cursor:"hand"
+ }, {
+ id:node_id + "utilz",
+ type:'rect',
+ width:12,
+ height:10,
+ x:node_x + 32,
+ y:node_y - 11,
+ radius:1,
+ fill:fill_color,
+ stroke:stroke_color,
+ "fill-opacity":1,
+ 'stroke-width':3,
+ cursor:"hand"});
+
+ drawSprites.push({
+ type:"text",
+ text:"C",
+ x:node_x + 7,
+ y:node_y - 6,
+ 'text-anchor':"middle",
+ 'font-size':"8"
+ }, {
+ type:"text",
+ text:"M",
+ x:node_x + 23,
+ y:node_y - 6,
+ 'text-anchor':"middle",
+ 'font-size':"8"
+ }, {
+ type:"text",
+ text:"U",
+ x:node_x + 38,
+ y:node_y - 6,
+ 'text-anchor':"middle",
+ 'font-size':"8"});
+ }
+ *
+ * */
+
+/*
+ if (status != undefined) {
+ if (status == 0) {
+ fill_color = '#eedf00';
+ stroke_color = '#776f00';
+ }
+ if (status == 1) {
+ fill_color = '#96ee66';
+ stroke_color = '#137f00';
+ }
+ if (status == -1) {
+ fill_color = '#e01';
+ stroke_color = '#580300';
+ }
+ } else {
+ fill_color = '#96ee66';
+ stroke_color = '#137f00';
+ }
+
+ if (link_status != undefined) {
+ if (link_status == 0) {
+ link_fill_color = '#776f00';
+ link_stroke_color = '#776f00';
+ }
+ if (link_status == 1) {
+ link_fill_color = '#25ee0f';
+ link_stroke_color = '#25ee0f';
+ }
+ if (link_status == -1) {
+ link_fill_color = '#580300';
+ link_stroke_color = '#580300';
+ }
+ } else {
+ link_fill_color = '#776f00';
+ link_stroke_color = '#776f00';
+ }
+ */

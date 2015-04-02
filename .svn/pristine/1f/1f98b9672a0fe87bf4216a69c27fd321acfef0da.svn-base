@@ -1,0 +1,24 @@
+package com.hp.temip.alb_gui.dao;
+
+import com.hp.temip.alb_gui.domain.UserAccessAudit;
+import com.hp.temip.alb_gui.domain.UserAccessAuditChart;
+
+import java.util.List;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 10/1/12
+ * Time: 11:43 AM
+ * To change this template use File | Settings | File Templates.
+ */
+public interface UserAccessAuditMapper {
+
+    int insertAudit(UserAccessAudit userAccessAudit);
+
+    int updateAudit(UserAccessAudit userAccessAudit);
+
+    List<UserAccessAudit> getUserAccessList();
+
+    List<UserAccessAuditChart> getUserAccessChartData();
+}

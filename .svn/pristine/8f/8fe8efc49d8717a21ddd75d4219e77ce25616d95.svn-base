@@ -1,0 +1,52 @@
+package com.hp.temip.alb_gui.util;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 9/5/13
+ * Time: 1:49 PM
+ * To change this template use File | Settings | File Templates.
+ */
+public class Constants {
+
+
+    //PREDEFINED FUNCTIONS
+    private static String PREDEF_REMOVE_LEADING_TRAIL_BLANKS = "remove_leading_and_trailing_blanks";
+    private static String PREDEF_REMOVE_LEADING_BLANKS = "remove_leading_blanks";
+    private static String PREDEF_REMOVE_TRAILING_BLANKS = "remove_trailling_blanks"; //yes, there is a typo and it's what is in the document
+    private static String PREDEF_REPLACE_MULTIPLE_WHITE_SPACES = "replace_mutliple_white_spaces"; //yes still there is a typo
+    private static String COMPRESS_BLANKS = "compress_blanks";
+    private static String HEX_2_INT = "hex2int";
+    private static String INT_2_HEX = "int2hex";
+    private static String ADD_LEADING_0 = "Add_leading_0";
+    private static String APPEND = "append";
+    private static String APPEND2 = "Append";
+    private static String LINE_FEED = "linefeed";
+    private static String WORD = "word";
+    private static String LINE = "line";
+    private static String EXTRACT_BITS = "ExtractBits";
+    private static String EXTRACT_CHARS = "ExtractChars";
+    private static String STRING_2_INT = "string2int";
+    private static String IS_INTEGER_STRING = "isIntegerString";
+    private static String MATCH = "match";
+    private static String INT = "int";
+    private static String HEX_2_ASCII = "hex2ascii";
+    private static String LOCAL_TIME = "localtime";
+    private static String SUBSTRING_UNTIL = "substring until";
+    private static String AFTER = "after";
+    private static String BETWEEN = "between";
+    private static String REPLACE = "replace";
+    private static String LOWERCASE = "lowercase";
+    private static String UPPERCASE = "uppercase";
+    private static String SPRINTF = "sprintf";
+    private static String SUBSTRING = "substring";
+
+
+
+
+
+
+
+
+
+}

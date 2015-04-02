@@ -1,0 +1,41 @@
+package com.hp.temip.alb_gui.service;
+
+import com.hp.temip.alb_gui.dao.SampleAlarmMapper;
+import com.hp.temip.alb_gui.domain.AlarmGridObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Copyright Hewlett Packard Sales (M) Sdn Bhd
+ * User: Thaniswaran Raja Goval
+ * Email: thaniswaran.raja-goval@hp.com
+ * Date: 9/1/13
+ * Time: 2:22 AM
+ * Project: $(PROJECT_NAME)
+ * Package: com.hp.temip.alb_gui.service
+ */
+@Service("SampleAlarmService")
+@Transactional(readOnly = true)
+public class SampleAlarmService {
+    @Autowired
+    private SampleAlarmMapper sampleAlarmMapper;
+
+    public List<AlarmGridObject> getAlarmList() {
+        return (List<AlarmGridObject>)sampleAlarmMapper.getAlarmList();
+    }
+
+    public int insertNewAlarm(AlarmGridObject alarmGridObject) {
+        return (int)sampleAlarmMapper.insertNewAlarm(alarmGridObject);
+    }
+
+    public int updateAlarm(AlarmGridObject alarmGridObject) {
+        return (int)sampleAlarmMapper.updateAlarm(alarmGridObject);
+    }
+
+    public int removeSampleAlarm(AlarmGridObject alarmGridObject) {
+        return (int)sampleAlarmMapper.removeSampleAlarm(alarmGridObject);
+    }
+}

@@ -1,0 +1,167 @@
+package com.hp.temip.alb_gui.controller;
+
+import com.hp.temip.alb_gui.domain.AlarmGridObject;
+import com.hp.temip.alb_gui.service.SampleAlarmService;
+import com.hp.temip.alb_gui.service.UserAccessAuditService;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+
+@Controller
+public class SampleAlarmManagementController {
+
+    private Log logger = LogFactory.getLog(getClass());
+    private SampleAlarmService service;
+    private UserAccessAuditService userAccessAuditService;
+
+    @Autowired
+    public void setService(SampleAlarmService service) {
+        this.service = service;
+    }
+
+    @Autowired
+    public void setUserAccessAuditService(UserAccessAuditService service) {
+        this.userAccessAuditService = service;
+    }
+
+    @RequestMapping(value = "/getAlarmList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getAlarmList() {
+        List<AlarmGridObject> alarmGridObjects = service.getAlarmList();
+
+        HashMap<String, List<AlarmGridObject>> modelMap = new HashMap<String, List<AlarmGridObject>>();
+        modelMap.put("alarms", alarmGridObjects);
+        logger.info(alarmGridObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "insertNewAlarm.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertNewUsers(@RequestParam String alarmName, @RequestParam String alarmText,
+                                                 @RequestParam String alarmRemark) {
+        String result;
+        try {
+
+            logger.debug("SampleAlarm post object: alarmName: " + alarmName + " | alarmText: " + alarmText + " | alarmRemark: " + alarmRemark);
+
+            if (null == alarmName || null == alarmText || null == alarmRemark) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+
+            AlarmGridObject alarmGridObject = new AlarmGridObject();
+            alarmGridObject.setAlarmName(alarmName);
+            alarmGridObject.setAlarmText(alarmText);
+            alarmGridObject.setAlarmRemark(alarmRemark);
+
+            logger.debug("Inserting SampleAlarm: " + alarmGridObject.toString());
+            service.insertNewAlarm(alarmGridObject);
+            result = "{success:true}";
+        } catch (Exception e) {
+            String errorReason = "Failed to add sample alarm. Please contact Administrator.";
+            try {
+                throw e.getCause();
+            } catch (SQLException sql) {
+                if (sql.getErrorCode() == -104 && sql.getSQLState().equals("23000"))
+                    errorReason = "Failed to add sample alarm, duplicate alarm name.";
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+            result = "{success:false, errors:{reason:'" + errorReason + "'}}";
+        }
+
+        userAccessAuditService.insertAudit("SAMPLE_ALARM:NEW");
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+
+
+    }
+
+    @RequestMapping(value = "updateAlarm.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> updateAlarm(@RequestParam String alarmName, @RequestParam String alarmText,
+                                              @RequestParam String alarmRemark) {
+        String result;
+        try {
+
+            logger.debug("SampleAlarm post object: alarmName: " + alarmName + " | alarmText: " + alarmText + " | alarmRemark: " + alarmRemark);
+
+            if (null == alarmName || null == alarmText || null == alarmRemark) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+
+            AlarmGridObject alarmGridObject = new AlarmGridObject();
+            alarmGridObject.setAlarmName(alarmName);
+            alarmGridObject.setAlarmText(alarmText);
+            alarmGridObject.setAlarmRemark(alarmRemark);
+
+            logger.debug("Updating SampleAlarm: " + alarmGridObject.toString());
+            service.updateAlarm(alarmGridObject);
+            result = "{success:true}";
+        } catch (Exception e) {
+            String errorReason = "Failed to update sample alarm. Please contact Administrator.";
+            try {
+                throw e.getCause();
+            } catch (SQLException sql) {
+                if (sql.getErrorCode() == -104 && sql.getSQLState().equals("23000"))
+                    errorReason = "Failed to update sample alarm, duplicate alarm name.";
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+            result = "{success:false, errors:{reason:'" + errorReason + "'}}";
+        }
+
+        userAccessAuditService.insertAudit("SAMPLE_ALARM:UPDATE");
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+
+
+    }
+
+    @RequestMapping(value = "removeSampleAlarm.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> removeSampleAlarm(@RequestParam String alarmName) {
+        String result;
+        try {
+
+            logger.debug("SampleAlarm post object: alarmName: " + alarmName);
+
+            if (null == alarmName) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+
+            AlarmGridObject alarmGridObject = new AlarmGridObject();
+            alarmGridObject.setAlarmName(alarmName);
+
+            logger.debug("Removing SampleAlarm: " + alarmGridObject.toString());
+            service.removeSampleAlarm(alarmGridObject);
+            result = "{success:true}";
+        } catch (Exception e) {
+            String errorReason = "Failed to add sample alarm. Please contact Administrator.";
+            try {
+                throw e.getCause();
+            } catch (SQLException sql) {
+                if (sql.getErrorCode() == -104 && sql.getSQLState().equals("23000"))
+                    errorReason = "Failed to add sample alarm, duplicate alarm name.";
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+            result = "{success:false, errors:{reason:'" + errorReason + "'}}";
+        }
+        userAccessAuditService.insertAudit("SAMPLE_ALARM:REMOVE");
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+    }
+
+
+}

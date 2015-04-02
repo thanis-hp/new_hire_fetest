@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hp.temip.alb_gui.dao.SampleAlarmMapper">
+    <resultMap type="com.hp.temip.alb_gui.domain.AlarmGridObject" id="alarmGrid">
+        <result column="ALARM_NAME" property="alarmName" jdbcType="VARCHAR"/>
+        <result column="ALARM_TEXT" property="alarmText" jdbcType="VARCHAR"/>
+        <result column="ALARM_REMARK" property="alarmRemark" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <select id="getAlarmList" resultMap="alarmGrid">
+      SELECT * FROM ALB_ALARMSAMPLE;
+    </select>
+
+    <select id="getAlarm" resultMap="alarmGrid" parameterType="com.hp.temip.alb_gui.domain.AlarmGridObject">
+      SELECT * FROM ALB_ALARMSAMPLE WHERE ALARM_NAME = #{alarmName};
+    </select>
+
+    <insert id="insertNewAlarm" parameterType="com.hp.temip.alb_gui.domain.AlarmGridObject">
+        INSERT INTO ALB_ALARMSAMPLE (ALARM_NAME, ALARM_TEXT, ALARM_REMARK) VALUES (#{alarmName}, #{alarmText}, #{alarmRemark});
+    </insert>
+
+    <update id="updateAlarm" parameterType="com.hp.temip.alb_gui.domain.AlarmGridObject">
+        UPDATE ALB_ALARMSAMPLE a set a.ALARM_TEXT = #{alarmText}, a.ALARM_REMARK = #{alarmRemark} WHERE a.ALARM_NAME = #{alarmName};
+    </update>
+
+    <delete id="removeSampleAlarm" parameterType="com.hp.temip.alb_gui.domain.AlarmGridObject">
+        DELETE FROM ALB_ALARMSAMPLE WHERE ALARM_NAME = #{alarmName};
+    </delete>
+
+
+</mapper>

@@ -1,0 +1,214 @@
+Ext.apply(Ext.form.field.VTypes, {
+    IPAddress:  function(v) {
+        return /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(v);
+    },
+    IPAddressText: 'Must be a numeric IP address',
+    IPAddressMask: /[\d\.]/i
+});
+
+function getAlbHostGrid() {
+
+    var albHostStore = new Ext.data.JsonStore({
+        storeId:'host',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getHostList.htm',
+            reader:{
+                type:'json',
+                root:'hosts'
+            }
+        },
+
+        fields:['hostId', 'hostName', 'hostIP', 'enabled']
+    });
+
+    var cellEditing = Ext.create('Ext.grid.plugin.CellEditing', {
+        clicksToEdit:1
+    });
+
+    var addHostForm = {
+        xtype:'form',
+        id:'addHostForm',
+        layout:'form',
+        frame: true,
+        width   : 600,
+        bodyPadding: 10,
+        defaults: {
+            anchor: '100%',
+            labelWidth: 100
+        },
+        url:'insertNewHost.htm',
+        items:[
+            {
+                xtype:'textfield',
+                id:'hostName',
+                name:'hostName',
+                value:'',
+                fieldLabel:'Host Name',
+                allowBlank:false
+            },
+            {
+                xtype:'textfield',
+                id:'hostIP',
+                name:'hostIP',
+                value:'',
+                fieldLabel:'I.P. Address',
+                vtype: 'IPAddress',
+                allowBlank:false
+            }
+        ],
+        buttons:[
+            {
+                text:'Cancel',
+                handler:function () {
+                    this.up('window').hide();
+                }
+            },
+            {
+                text:'Add Host',
+                formBind:true,
+                handler:function () {
+                    var form = this.up('form').getForm();
+                    if (form.isValid()) {
+                        this.up('window').hide();
+                        Ext.getBody().mask('Adding New Host...');
+                        form.submit({
+                            success:function (form, action) {
+                                Ext.Msg.alert('Success', 'New Host added successfully');
+                                albHostStore.reload();
+                                Ext.getBody().unmask();
+
+                            },
+                            failure:function (form, action) {
+                                Ext.getBody().unmask();
+                                Ext.Msg.alert('Failed', 'Fail to sync.');
+                            }
+                        });
+                    }
+                }
+            }
+        ]
+    };
+
+    var addHostModelWin = Ext.widget('window', {
+        title:'Add New Host',
+        closeAction:'hide',
+        width:450,
+        layout:'fit',
+        modal:true,
+        items:[addHostForm]
+    });
+
+    var enabledCombo = new Ext.form.ComboBox({
+        xtype:'combo',
+        mode:'local',
+        triggerAction:'all',
+        queryMode:'local',
+        displayField:   'name',
+        valueField:     'value',
+        store:Ext.create('Ext.data.Store', {
+            fields:['name', 'value'],
+            data:[
+                {name:'Active', value:1},
+                {name:'Disabled', value:0}
+            ]
+        })
+    });
+
+    var albHostGrid = Ext.create('Ext.grid.Panel', {
+        id:'albHostMgmt-panel',
+        store:albHostStore,
+        columns:[
+            Ext.create('Ext.grid.RowNumberer'),
+            {text:"Host ID", dataIndex:'hostId', hidden: true},
+            {text:"Host Name", flex:1, sortable:true, dataIndex:'hostName',
+                editor:{
+                    xtype:'textfield'
+                }},
+            {text:"IP Address", flex:1, sortable:true, dataIndex:'hostIP',
+                editor:{
+                    xtype:'textfield',
+                    vtype: 'IPAddress'
+                }},
+            {text:"Status", width:100, sortable:true, dataIndex:'enabled',
+                editor:enabledCombo, renderer: Ext.util.Format.comboRenderer(enabledCombo)}
+
+        ],
+        columnLines:true,
+        collapsible:false,
+        title:'Host Management',
+        iconCls:'icon-grid',
+        autoScroll:true,
+        plugins:[cellEditing],
+        selModel:{
+            selType:'cellmodel'
+        },
+        tbar:[
+            {
+                xtype:'button',
+                text:'Refresh',
+                iconCls: 'icon-refresh',
+                handler:function () {
+                    albHostStore.reload();
+                }
+            },
+            {
+                xtype:'button',
+                text:'Save All',
+                iconCls: 'icon-save',
+                handler:function () {
+                    var test = albHostStore.getModifiedRecords();
+                    if (test.length > 0) {
+                        var dataArray = new Array();
+
+                        for (var i in test) {
+                            dataArray.push(test[i].data);
+
+                        }
+                        var postValue = JSON.stringify(dataArray);
+                        postValue = "{\"hosts\":" + postValue + "}";
+                        Ext.getBody().mask('Saving Hosts Details...');
+                        Ext.Ajax.request(
+                            {
+                                url:'updateHosts.htm',
+                                method:'POST',
+                                params:{dataArray:postValue},
+                                success:function (response) {
+                                    Ext.Msg.alert("Success", "Hosts Details saved successfully.");
+                                    albHostStore.reload();
+                                },
+                                failure:function (response) {
+                                    Ext.Msg.alert("Fail", "Fail to save Hosts.");
+                                },
+                                callback:function () {
+                                    Ext.getBody().unmask();
+                                    albHostStore.reload();
+                                }
+                            }
+                        );
+                    } else {
+                        Ext.Msg.alert("No Changes", "Nothing to save.")
+                    }
+                }
+            },{
+                xtype:'button',
+                iconCls: 'icon-add-user',
+                text:'Add New Host',
+                handler:function () {
+                    addHostModelWin.show();
+                }
+            }
+        ],
+        listeners:{
+            activate: function(grid,eOpts) {
+                albHostStore.reload();
+            }
+        }
+    });
+
+
+    return albHostGrid;
+}
+
+

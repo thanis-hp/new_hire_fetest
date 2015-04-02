@@ -1,0 +1,251 @@
+function showSDByPrf(location, serviceType){
+    Ext.getCmp('serviceDashboardPrefs-panel').setTitle('Service Dashboard (24 Hour) by Location: ' +
+        location + ', Service Type: ' + serviceType + ' - Last Refreshed: ' + (new Date()).toLocaleString());
+    Ext.getCmp('content-panel').layout.setActiveItem('serviceDashboardPrefs-panel');
+    Ext.getCmp('serviceDashboardPrefs-panel').store.load({params: {location:location, serviceType: serviceType}});
+
+}
+
+function getServiceDashboardLocation() {
+    var serviceDashboardLocStore = new Ext.data.JsonStore({
+        storeId:'locationStore',
+        autoLoad:false,
+        sorters:['serviceType', 'location'],
+        proxy:{
+            type:'ajax',
+            url:'getServiceDashboardLocation.htm',
+            reader:{
+                type:'json',
+                root:'sdl'
+            },
+            params:{region:'', serviceType:''}
+        },
+
+        fields:['location', 'abbr', 'serviceType', 'h00', 'h01', 'h02', 'h03', 'h04', 'h05', 'h06', 'h07', 'h08', 'h09', 'h10', 'h11', 'h12', 'h13', 'h14', 'h15', 'h16', 'h17', 'h18', 'h19', 'h20', 'h21', 'h22', 'h23']
+    });
+    
+    function renderIcon(val, metaData, record, rowIndex, colIndex) {
+        var imageURL = val == "2" ? 'status-down' : val == "1" ? 'status-alert' : val == "0" ? 'status-up' : 'no-data';
+        return '<img src="images/' + imageURL + '.png" width="16" height="16">';
+    }
+
+    function renderLocation (val, metaData, record, rowIndex, colIndex) {
+        return '<a href="javascript:void(0)" onclick="showSDByPrf(\'' + record.get('location') + '\',\'' + record.get('serviceType') + '\');"><b>' + val + '</b>';
+    }
+
+    /*function loadServiceDashBoard(){
+     Ext.getCmp('serviceDashboard-panel').getStore().reload({});
+     }
+
+     var runner = new Ext.util.TaskRunner();
+     var getServiceDashBoardTask = runner.newTask({
+     run: function () {
+     loadServiceDashBoard();
+     },
+     interval: 3000
+     });*/
+
+    return Ext.create('Ext.grid.Panel', {
+        id:'serviceDashboardLoc1-panel',
+        collapsible:false,
+        iconCls:'icon-grid',
+        frame:true,
+        columnLines:true,
+        store:serviceDashboardLocStore,
+        sortableColumns:false,
+        enableColumnHide:false,
+        enableColumnResize:false,
+        enableColumnMove:false,
+        title:'Service Dashboard (24 Hour) - Last Refreshed: ' + (new Date()).toLocaleString(),
+        tbar:[
+            {
+                xtype:'button',
+                iconCls: 'icon-back',
+                text:'Back',
+                handler:function () {
+                    serviceDashboardLocStore.load({params: {region:'', serviceType: ''}});
+                    Ext.getCmp('content-panel').layout.setActiveItem('serviceDashboard-panel');
+                }
+            },{
+                xtype:'button',
+                iconCls: 'icon-refresh',
+                text:'Refresh',
+                handler:function () {
+                    var n = Ext.getCmp('serviceDashboardLoc-panel').title.split("-");
+                    Ext.getCmp('serviceDashboardLoc-panel').setTitle(n[0] + ' - Last Refreshed: ' + (new Date()).toLocaleString());
+                    serviceDashboardLocStore.reload();
+                }
+            }
+        ],
+        columns:[
+            {
+                text:'Time (Hourly)',
+                flex:1,
+                dataIndex:'location',
+                renderer: renderLocation
+            },
+            {
+                text:getHeaderName(0),
+                dataIndex:'h' + getHeaderName(0),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(1),
+                dataIndex:'h' + getHeaderName(1),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(2),
+                dataIndex:'h' + getHeaderName(2),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(3),
+                dataIndex:'h' + getHeaderName(3),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(4),
+                dataIndex:'h' + getHeaderName(4),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(5),
+                dataIndex:'h' + getHeaderName(5),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(6),
+                dataIndex:'h' + getHeaderName(6),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(7),
+                dataIndex:'h' + getHeaderName(7),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(8),
+                dataIndex:'h' + getHeaderName(8),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(9),
+                dataIndex:'h' + getHeaderName(9),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(10),
+                dataIndex:'h' + getHeaderName(10),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(11),
+                dataIndex:'h' + getHeaderName(11),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(12),
+                dataIndex:'h' + getHeaderName(12),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(13),
+                dataIndex:'h' + getHeaderName(13),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(14),
+                dataIndex:'h' + getHeaderName(14),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(15),
+                dataIndex:'h' + getHeaderName(15),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(16),
+                dataIndex:'h' + getHeaderName(16),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(17),
+                dataIndex:'h' + getHeaderName(17),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(18),
+                dataIndex:'h' + getHeaderName(18),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(19),
+                dataIndex:'h' + getHeaderName(19),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(20),
+                dataIndex:'h' + getHeaderName(20),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(21),
+                dataIndex:'h' + getHeaderName(21),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:getHeaderName(22),
+                dataIndex:'h' + getHeaderName(22),
+                width:35,
+                renderer:renderIcon
+            },
+            {
+                text:'<b>' + getHeaderName(23) + '</b>',
+                dataIndex:'h' + getHeaderName(23),
+                width:35,
+                renderer:renderIcon
+            }
+        ],
+        listeners:{
+            activate:function (grid, eOpts) {
+                serviceDashboardLocStore.reload();
+            }
+        }/*,
+         fbar: ['->',{
+         text: 'Export as PDF',
+         iconCls:'go-home',
+         handler : function(){
+         location.href = '#';
+         }
+         },{
+         text: 'Export as CSV',
+         iconCls:'go-home',
+         handler : function(){
+         location.href = '#';
+         }
+         }]*/
+    });
+}

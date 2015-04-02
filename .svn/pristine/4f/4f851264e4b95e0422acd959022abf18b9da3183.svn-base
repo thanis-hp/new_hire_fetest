@@ -1,0 +1,251 @@
+package com.hp.temip.alb_gui.controller;
+
+import com.hp.temip.alb_gui.domain.*;
+import com.hp.temip.alb_gui.domain.User;
+import com.hp.temip.alb_gui.service.ProfileService;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.*;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 8/27/13
+ * Time: 4:47 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Controller
+public class ProfileController {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    private ProfileService service;
+
+    //constants for the file names.. to use in inserting values in DB
+    private static final String PARAMETER_EXTRACT_SUFFIX = "_parametextraction.csv";
+    private static final String ALARM_IDENTIFIER_SUFFIX = "_alarmidentifier.csv";
+    private static final String CUSTOM_FIELDS = "custom_fields.csv";
+
+
+    @Autowired
+    public void setService(ProfileService service) {
+        this.service = service;
+    }
+
+
+
+    @RequestMapping(value = "/getProfileList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getProfileList() {
+        List<ProfileGridObject> profileList = service.getProfileList();
+
+        HashMap<String, List<ProfileGridObject>> modelMap = new HashMap<String, List<ProfileGridObject>>();
+        modelMap.put("profiles", profileList);
+        logger.info(profileList);
+        return modelMap;
+    }
+
+
+    @RequestMapping(value = "insertNewProfile.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertNewProfile(@RequestParam String profileId) {
+        String result = "{success:true}";
+
+
+        try {
+
+            org.springframework.security.core.userdetails.User user = (org.springframework.security.core.userdetails.User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+            if (null == profileId) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+
+            ProfileGridObject profileGridObject = new ProfileGridObject();
+            profileGridObject.setProfileId(profileId);
+            profileGridObject.setTranslateStatus("Pending");
+            profileGridObject.setDeployStatus("Pending");
+
+            //check if profile exist first (any version)
+            List<ProfileGridObject> checkExists = service.checkProfileExists(profileId);
+
+            if(checkExists != null && checkExists.size() > 0){
+                long albVersion = service.getTopAlbVersion(profileId);
+                logger.debug("XXVERSION (before increment):"+albVersion);
+                profileGridObject.setAlbVersion(Long.toString(albVersion+1));
+            }else{
+                logger.debug("XXVERSION setting to 1");
+                profileGridObject.setAlbVersion("1");
+            }
+
+
+
+            profileGridObject.setAlbUser(user.getUsername());
+            profileGridObject.setCustomFields(CUSTOM_FIELDS);
+            profileGridObject.setProfileAlarmProcessing(profileId);
+            profileGridObject.setControlFileAlarmIdentifier(profileId+ALARM_IDENTIFIER_SUFFIX);
+            profileGridObject.setControlFileParameterExtraction(profileId+PARAMETER_EXTRACT_SUFFIX);
+
+
+            SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            String today = sf.format(new Date());
+            logger.debug("today is:"+today);
+
+
+            profileGridObject.setDateCreated(today);
+
+            logger.info("Inserting Profile: " + profileGridObject.toString());
+            service.insertNewUser(profileGridObject);
+
+            result = "{success:true}";
+        } catch (Exception e) {
+            e.printStackTrace();
+            result = "{success:false}";
+        }
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+
+
+    }
+
+
+
+    @RequestMapping(value = "/getSelectionControl.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getSelectionControl(@RequestParam(value = "profileId") String profileId, @RequestParam(value = "albVersion") String albVersion) {
+        logger.debug("profileId is: "+profileId);
+
+        SelectionControlGridObject searchParams = new SelectionControlGridObject();
+        searchParams.setProfileId(profileId);
+        searchParams.setAlbVersion(albVersion);
+
+        List<SelectionControlGridObject> selectionControlGridObject = service.getSelectionControl(searchParams);
+
+        logger.debug("albVersion is: "+albVersion);
+        HashMap<String, List<SelectionControlGridObject>> modelMap = new HashMap<String, List<SelectionControlGridObject>>();
+        modelMap.put("selctrl", selectionControlGridObject);
+        logger.info(selectionControlGridObject);
+        return modelMap;
+    }
+
+
+
+    @RequestMapping(value = "/getParamExtract.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getParamExtract(@RequestParam(value = "profileId") String profileId, @RequestParam(value = "albVersion") String albVersion) {
+        logger.debug("profileId is: "+profileId);
+
+        ParameterExtractGridObject searchParams = new ParameterExtractGridObject();
+        searchParams.setProfileId(profileId);
+        searchParams.setAlbVersion(albVersion);
+
+        List<ParameterExtractGridObject> parameterExtractGridObjects = service.getParameterExtract(searchParams);
+
+        logger.debug("albVersion is: "+albVersion);
+        HashMap<String, List<ParameterExtractGridObject>> modelMap = new HashMap<String, List<ParameterExtractGridObject>>();
+        modelMap.put("paramextract", parameterExtractGridObjects);
+        logger.info(parameterExtractGridObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "/getAlarmIdentifiers.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getAlarmIdentifiers(@RequestParam(value = "profileId") String profileId, @RequestParam(value = "albVersion") String albVersion) {
+        logger.debug("profileId is: "+profileId);
+
+        AlarmIdentifierGridObject searchParams = new AlarmIdentifierGridObject();
+        searchParams.setProfileId(profileId);
+        searchParams.setAlbVersion(albVersion);
+
+        List<AlarmIdentifierGridObject> alarmIdentifierGridObjects = service.getAlarmIdentifier(searchParams);
+
+        logger.debug("albVersion is: "+albVersion);
+        HashMap<String, List<AlarmIdentifierGridObject>> modelMap = new HashMap<String, List<AlarmIdentifierGridObject>>();
+        modelMap.put("alarm", alarmIdentifierGridObjects);
+        logger.info(alarmIdentifierGridObjects);
+        return modelMap;
+    }
+
+
+
+
+    @RequestMapping(value = "insertFullProfile.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertFullProfile(@RequestParam String profileId) {
+        String result = "{success:true}";
+
+
+        try {
+
+            org.springframework.security.core.userdetails.User user = (org.springframework.security.core.userdetails.User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+            if (null == profileId) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+
+            ProfileGridObject profileGridObject = new ProfileGridObject();
+            profileGridObject.setProfileId(profileId);
+            profileGridObject.setTranslateStatus("Pending");
+            profileGridObject.setDeployStatus("Pending");
+
+            //check if profile exist first (any version)
+            List<ProfileGridObject> checkExists = service.checkProfileExists(profileId);
+
+            if(checkExists != null && checkExists.size() > 0){
+                long albVersion = service.getTopAlbVersion(profileId);
+                logger.debug("XXVERSION (before increment):"+albVersion);
+                profileGridObject.setAlbVersion(Long.toString(albVersion+1));
+            }else{
+                logger.debug("XXVERSION setting to 1");
+                profileGridObject.setAlbVersion("1");
+            }
+
+
+
+            profileGridObject.setAlbUser(user.getUsername());
+            profileGridObject.setCustomFields(CUSTOM_FIELDS);
+            profileGridObject.setProfileAlarmProcessing(profileId);
+            profileGridObject.setControlFileAlarmIdentifier(profileId+ALARM_IDENTIFIER_SUFFIX);
+            profileGridObject.setControlFileParameterExtraction(profileId+PARAMETER_EXTRACT_SUFFIX);
+
+
+            SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            String today = sf.format(new Date());
+            logger.debug("today is:"+today);
+
+
+            profileGridObject.setDateCreated(today);
+
+            logger.info("Inserting Profile: " + profileGridObject.toString());
+            service.insertNewUser(profileGridObject);
+
+            result = "{success:true}";
+        } catch (Exception e) {
+            e.printStackTrace();
+            result = "{success:false}";
+        }
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+
+
+    }
+
+
+
+
+
+
+}

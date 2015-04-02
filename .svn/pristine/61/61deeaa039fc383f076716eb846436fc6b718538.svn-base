@@ -1,0 +1,37 @@
+
+
+function getLayout() {
+
+    var pbar = Ext.create('Ext.ProgressBar', {
+        id    : 'pbar',
+        width : 300,
+        height:10
+    });
+
+    pbar.wait({
+        interval: 500,
+        //duration: 50000,
+        increment: 15,
+        text: 'fetching...',
+        scope: this
+    });
+
+
+    return {
+
+        start:{
+            id:'start-panel',
+            title:'Welcome to TeMIP ALB GUI',
+            layout:'fit',
+            bodyStyle:'padding:25px',
+            contentEl:'start-div'
+        },
+        profileManagement:getProfileManagementMain(),
+        profileGrids:getProfileGrids(),
+        userAccessTable:getUserAccessGrid(),
+        userManagement:getUserGrid(),
+        sampleAlarmManagement: getAlarmGrid()
+    };
+}
+
+	 

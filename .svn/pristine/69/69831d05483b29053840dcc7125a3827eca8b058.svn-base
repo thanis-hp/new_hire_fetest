@@ -1,0 +1,112 @@
+ function getJobStatus(jobsId){
+     Ext.require([ '*' ]);
+	   Ext.Ajax.request({
+		   url : 'getSpeedProfileStatus.htm',
+		   method : 'POST',
+		   params : {"jobId":jobsId},
+           success : function(response) {
+               var status = Ext.decode(response.responseText).success;
+               if (status){
+                   var result = Ext.decode(response.responseText).data.status;
+                   if (result == 'PENDING')
+                       getJobStatus(jobsId);
+                   else{
+                       Ext.getCmp('configGrid-panel').getStore().reload({
+                           params: {subscriberId: Ext.getCmp('servicesCombo').getValue()}
+                       });
+                       Ext.getCmp('configGrid-panel').getStore().sort('vInterface', 'ASC');
+                       Ext.getCmp('modelPBWin').close();
+                       Ext.getCmp('refreshSP').setDisabled(false);
+                       Ext.getCmp('refreshSP').setText('Refresh Speed Profile');
+                   }
+               }else if (!status){
+                   var jsonRespObj = Ext.decode(response.responseText).data;
+                   Ext.getCmp('modelPBWin').close();
+                   Ext.getCmp('refreshSP').setDisabled(false);
+                   Ext.getCmp('refreshSP').setText('Refresh Speed Profile');
+                   Ext.Msg.alert('Job Failed', jsonRespObj.errCode + "<br>" + jsonRespObj.errMsg );
+               }
+	       },
+	       failure : function(response) {
+	    	   alert('FAIL');
+	       }
+	   });
+}
+
+ var speedProfileStore = new Ext.data.JsonStore({
+     storeId:'profileDets',
+     autoLoad:false,
+     proxy:{
+         type:'ajax',
+         url:'getSpeedProfile.htm',
+         reader:{
+             type:'json',
+             root:'speedProfileDet'
+         }
+     },
+
+     fields: [
+         {name: 'v_interface'},
+         {name: 'direction'},
+         {name: 'speedProfile'},
+         {name: 'lastUpdatedDate'},
+         {name: 'v_interfaceType'},
+         {name: 'cvLanId'},
+         {name: 'v_interfaceId'}
+     ]
+ });
+
+ var configGridTab = Ext.create('Ext.grid.Panel', {
+     id:'configGrid-panel',
+     store: speedProfileStore,
+     columns: [
+         {text: "LAN Id", flex:1, sortable: true, dataIndex: 'v_interface'},
+         {text: "DIRECTION", flex:1, sortable: true, dataIndex: 'direction'},
+         {text: "SPEED PROFILE", flex:1, sortable: true, dataIndex: 'speedProfile'},
+         {text: "VINTERFACE TYPE", flex:1, sortable: true, dataIndex: 'v_interfaceType'},
+         {text: "CVLAN ID", flex:1, sortable: true, dataIndex: 'cvLanId'},
+         {text: "VINTERFACE ID", flex:1, sortable: true, dataIndex: 'v_interfaceId'},
+         {text: "LAST UPDATED DATE", flex:1, sortable: true, dataIndex: 'lastUpdatedDate'}
+     ],
+     columnLines:true,
+     collapsible:false,
+     title:'Configuration',
+     autoScroll:true,
+     tbar: [
+         {
+             xtype: 'button',
+             text            : 'Refresh Speed Profile',
+             id              : 'refreshSP',
+             handler: function(){
+                 Ext.Ajax.request({
+                     url : 'insertHPSAJob.htm',
+                     method : 'POST',
+                     params : {"subscriberId":Ext.getCmp('txtSubId').getValue(), "deviceIp":deviceIp, "port":portParam},
+                     success : function(response) {
+                         Ext.getCmp('modelPBWin').show();
+                         Ext.getCmp('refreshSP').setDisabled(true);
+                         Ext.getCmp('refreshSP').setText('please wait ...');
+                         if (response.responseText == '-1'){
+                             Ext.getCmp('modelPBWin').close();
+                             Ext.getCmp('refreshSP').setDisabled(false);
+                             Ext.getCmp('refreshSP').setText('Refresh Speed Profile');
+                             Ext.Msg.alert('Failed', 'FSP(Frame, Slot and port) data missing!!! ');
+                         } else{
+                             getJobStatus(response.responseText);
+                         }
+
+                     },
+                     failure : function(response) {
+                         alert('FAIL');
+                     }
+                 });
+             }
+         }
+     ]
+ });
+
+
+ 
+ 
+	
+    

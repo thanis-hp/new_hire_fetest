@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="war" name="celcom_temip_alb_base:war">
+    <output-path>$PROJECT_DIR$/target</output-path>
+    <root id="archive" name="temip_alb.war">
+      <element id="artifact" artifact-name="celcom_temip_alb_base:war exploded" />
+    </root>
+  </artifact>
+</component>

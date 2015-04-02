@@ -1,0 +1,128 @@
+package com.hp.temip.alb_gui.domain;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 8/27/13
+ * Time: 6:11 PM
+ * To change this template use File | Settings | File Templates.
+ */
+public class SelectionControlGridObject {
+
+//    PROFILE_ID VARCHAR(20),
+//    ACCESS_MODULE VARCHAR(20),
+//    GLOBAL_CLASS VARCHAR(20),
+//    DOMAINS VARCHAR(20),
+//    NODE_NAME VARCHAR(20),
+//    SUBCLASS VARCHAR(20),
+//    ORIGINAL_ALARM_REMAIN VARCHAR(20),
+//    PROFILE VARCHAR(20),
+//    MANAGED_OBJECT_DISCRIMINATOR VARCHAR(20),
+//    ALB_VERSION VARCHAR(20),
+//    ALB_USER VARCHAR(20),
+//    DATE_CREATED TIMESTAMP NULL
+
+    private String profileId;
+    private String accessModule;
+    private String globalClass;
+    private String domains;
+    private String nodeName;
+    private String subclass;
+    private String originalAlarmRemain;
+    private String managedObjectDiscriminator;
+    private int albVersion;
+    private String albUser;
+    private String dateCreated;
+
+
+    public String getProfileId() {
+        return profileId;
+    }
+
+    public void setProfileId(String profileId) {
+        this.profileId = profileId;
+    }
+
+    public String getAccessModule() {
+        return accessModule;
+    }
+
+    public void setAccessModule(String accessModule) {
+        this.accessModule = accessModule;
+    }
+
+    public String getGlobalClass() {
+        return globalClass;
+    }
+
+    public void setGlobalClass(String globalClass) {
+        this.globalClass = globalClass;
+    }
+
+    public String getDomains() {
+        return domains;
+    }
+
+    public void setDomains(String domains) {
+        this.domains = domains;
+    }
+
+    public String getNodeName() {
+        return nodeName;
+    }
+
+    public void setNodeName(String nodeName) {
+        this.nodeName = nodeName;
+    }
+
+    public String getSubclass() {
+        return subclass;
+    }
+
+    public void setSubclass(String subclass) {
+        this.subclass = subclass;
+    }
+
+    public String getOriginalAlarmRemain() {
+        return originalAlarmRemain;
+    }
+
+    public void setOriginalAlarmRemain(String originalAlarmRemain) {
+        this.originalAlarmRemain = originalAlarmRemain;
+    }
+
+    public String getManagedObjectDiscriminator() {
+        return managedObjectDiscriminator;
+    }
+
+    public void setManagedObjectDiscriminator(String managedObjectDiscriminator) {
+        this.managedObjectDiscriminator = managedObjectDiscriminator;
+    }
+
+    public int getAlbVersion() {
+        return albVersion;
+    }
+
+    public void setAlbVersion(int albVersion) {
+        this.albVersion = albVersion;
+    }
+
+    public String getAlbUser() {
+        return albUser;
+    }
+
+    public void setAlbUser(String albUser) {
+        this.albUser = albUser;
+    }
+
+    public String getDateCreated() {
+        return dateCreated;
+    }
+
+    public void setDateCreated(String dateCreated) {
+        this.dateCreated = dateCreated;
+    }
+
+
+
+}

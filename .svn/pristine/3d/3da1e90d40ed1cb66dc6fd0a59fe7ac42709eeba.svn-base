@@ -1,0 +1,48 @@
+package com.hp.temip.alb_gui.service;
+
+import com.hp.temip.alb_gui.dao.UserMapper;
+import com.hp.temip.alb_gui.domain.UserGridObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 8/16/12
+ * Time: 12:08 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Service("UserService")
+@Transactional(readOnly = true)
+public class UserService {
+    @Autowired
+    private UserMapper userMapper;
+
+
+    public List<UserGridObject> getUserList() {
+        return (List<UserGridObject>)userMapper.getUserList();
+    }
+
+    public int updateUsers(UserGridObject userGridObject) {
+        return (int)userMapper.updateUsers(userGridObject);
+    }
+
+    public int updateRolebyUserId(UserGridObject userGridObject) {
+        return (int)userMapper.updateRolebyUserId(userGridObject);
+    }
+
+    public long getUserId() {
+        return (long)userMapper.getUserId();
+    }
+
+    public int insertNewUser(UserGridObject userGridObject) {
+        return (int)userMapper.insertNewUser(userGridObject);
+    }
+
+    public int insertRoleForUser(UserGridObject userGridObject) {
+        return (int)userMapper.insertRoleForUser(userGridObject);
+    }
+}

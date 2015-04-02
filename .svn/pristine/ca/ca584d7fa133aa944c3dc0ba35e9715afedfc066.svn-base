@@ -1,0 +1,19 @@
+package com.hp.temip.alb_gui.dao;
+
+import com.hp.temip.alb_gui.domain.AlbReferenceObject;
+
+import java.util.List;
+
+/**
+ * Copyright Hewlett Packard Sales (M) Sdn Bhd
+ * User: Thaniswaran Raja Goval
+ * Email: thaniswaran.raja-goval@hp.com
+ * Date: 9/25/13
+ * Time: 11:21 AM
+ * Project: $(PROJECT_NAME)
+ * Package: com.hp.temip.alb_gui.dao
+ */
+public interface AlbReference {
+
+    public List<AlbReferenceObject> getReferenceList(int refCat);
+}

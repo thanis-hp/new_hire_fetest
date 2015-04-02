@@ -1,0 +1,537 @@
+package com.hp.temip.alb_gui.controller;
+
+import com.hp.temip.alb_gui.domain.*;
+import com.hp.temip.alb_gui.service.ProfileService;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.io.*;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 8/27/13
+ * Time: 4:47 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Controller
+public class ProfileController {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    private ProfileService service;
+
+    //constants for the file names.. to use in inserting values in DB
+    private static final String PARAMETER_EXTRACT_SUFFIX = "_parametextraction.csv";
+    private static final String ALARM_IDENTIFIER_SUFFIX = "_alarmidentifier.csv";
+    private static final String CUSTOM_FIELDS = "custom_fields.csv";
+    private static final String JSON_POST_VALUE = "postvalue";
+    private static final String JSON_SELECTION_CONTROL = "selctrl";
+    private static final String JSON_PARAMETER_EXTRACT = "paramextract";
+    private static final String JSON_ALARM_IDENTIFICATION = "alarmident";
+
+
+    private static final String SCRIPT_NAME = "file.bat"; //
+
+
+
+    @Autowired
+    public void setService(ProfileService service) {
+        this.service = service;
+    }
+
+
+
+    @RequestMapping(value = "/getProfileList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getProfileList() {
+        List<ProfileGridObject> profileList = service.getProfileList();
+
+        HashMap<String, List<ProfileGridObject>> modelMap = new HashMap<String, List<ProfileGridObject>>();
+        modelMap.put("profiles", profileList);
+        logger.info(profileList);
+        return modelMap;
+    }
+
+
+    @RequestMapping(value = "insertNewProfile.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertNewProfile(@RequestParam String profileId) {
+        String result = "{success:true}";
+
+
+        try {
+
+            org.springframework.security.core.userdetails.User user = (org.springframework.security.core.userdetails.User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+            if (null == profileId) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+
+            ProfileGridObject profileGridObject = new ProfileGridObject();
+            profileGridObject.setProfileId(profileId);
+            profileGridObject.setTranslateStatus("Pending");
+            profileGridObject.setDeployStatus("Pending");
+
+            //check if profile exist first (any version)
+            List<ProfileGridObject> checkExists = service.checkProfileExists(profileId);
+
+            if(checkExists != null && checkExists.size() > 0){
+                long albVersion = service.getTopAlbVersion(profileId);
+                logger.debug("XXVERSION (before increment):"+albVersion);
+                profileGridObject.setAlbVersion(Long.toString(albVersion+1));
+            }else{
+                logger.debug("XXVERSION setting to 1");
+                profileGridObject.setAlbVersion("1");
+            }
+
+
+
+            profileGridObject.setAlbUser(user.getUsername());
+            profileGridObject.setCustomFields(CUSTOM_FIELDS);
+            profileGridObject.setProfileAlarmProcessing(profileId);
+            profileGridObject.setControlFileAlarmIdentifier(profileId+ALARM_IDENTIFIER_SUFFIX);
+            profileGridObject.setControlFileParameterExtraction(profileId+PARAMETER_EXTRACT_SUFFIX);
+
+
+            SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            String today = sf.format(new Date());
+            logger.debug("today is:"+today);
+
+
+            profileGridObject.setDateCreated(today);
+
+            logger.info("Inserting Profile: " + profileGridObject.toString());
+            service.insertNewProfile(profileGridObject);
+
+            result = "{success:true}";
+        } catch (Exception e) {
+            e.printStackTrace();
+            result = "{success:false}";
+        }
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+
+
+    }
+
+    @RequestMapping(value = "removeProfile.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> removeSampleAlarm(@RequestParam String profileId, @RequestParam String albVersion) {
+        String result;
+        try {
+
+            if (null == profileId || albVersion == null) {
+                result = "{success:false}";
+                return new ResponseEntity<String>(result, HttpStatus.OK);
+            }
+
+            ProfileGridObject profileGridObject = new ProfileGridObject();
+            profileGridObject.setProfileId(profileId);
+            profileGridObject.setAlbVersion(albVersion);
+
+            logger.debug("Removing Profile: " + profileGridObject.toString());
+            service.removeProfile(profileGridObject);
+            result = "{success:true}";
+        } catch (Exception e) {
+            String errorReason = "Failed to delete profile. Please contact Administrator.";
+            try {
+                throw e.getCause();
+            } catch (SQLException sql) {
+                //custom error reasons for different sql error code
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+            result = "{success:false, errors:{reason:'" + errorReason + "'}}";
+        }
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+    }
+
+
+
+    @RequestMapping(value = "/getSelectionControl.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getSelectionControl(@RequestParam(value = "profileId") String profileId, @RequestParam(value = "albVersion") String albVersion) {
+        logger.debug("profileId is: "+profileId);
+
+        SelectionControlGridObject searchParams = new SelectionControlGridObject();
+        searchParams.setProfileId(profileId);
+        searchParams.setAlbVersion(albVersion);
+
+        List<SelectionControlGridObject> selectionControlGridObject = service.getSelectionControl(searchParams);
+
+        logger.debug("albVersion is: "+albVersion);
+        HashMap<String, List<SelectionControlGridObject>> modelMap = new HashMap<String, List<SelectionControlGridObject>>();
+        modelMap.put("selctrl", selectionControlGridObject);
+        logger.info(selectionControlGridObject);
+        return modelMap;
+    }
+
+
+
+    @RequestMapping(value = "/getParamExtract.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getParamExtract(@RequestParam(value = "profileId") String profileId, @RequestParam(value = "albVersion") String albVersion) {
+        logger.debug("profileId is: "+profileId);
+
+        ParameterExtractGridObject searchParams = new ParameterExtractGridObject();
+        searchParams.setProfileId(profileId);
+        searchParams.setAlbVersion(albVersion);
+
+        List<ParameterExtractGridObject> parameterExtractGridObjects = service.getParameterExtract(searchParams);
+
+        logger.debug("albVersion is: "+albVersion);
+        HashMap<String, List<ParameterExtractGridObject>> modelMap = new HashMap<String, List<ParameterExtractGridObject>>();
+        modelMap.put("paramextract", parameterExtractGridObjects);
+        logger.info(parameterExtractGridObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "/getAlarmIdentifiers.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getAlarmIdentifiers(@RequestParam(value = "profileId") String profileId, @RequestParam(value = "albVersion") String albVersion) {
+        logger.debug("profileId is: "+profileId);
+
+        AlarmIdentifierGridObject searchParams = new AlarmIdentifierGridObject();
+        searchParams.setProfileId(profileId);
+        searchParams.setAlbVersion(albVersion);
+
+        List<AlarmIdentifierGridObject> alarmIdentifierGridObjects = service.getAlarmIdentifier(searchParams);
+
+        logger.debug("albVersion is: "+albVersion);
+        HashMap<String, List<AlarmIdentifierGridObject>> modelMap = new HashMap<String, List<AlarmIdentifierGridObject>>();
+        modelMap.put("alarm", alarmIdentifierGridObjects);
+        logger.info(alarmIdentifierGridObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "insertParameterExtract.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertParameterExtract(@RequestParam String profileId, @RequestParam String albVersion) {
+        String result = "{success:true}";
+        logger.debug("||"+profileId);
+        logger.debug("||"+albVersion); //disregard this
+
+
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "insertAlarmIdentifier.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertAlarmIdentifier(@RequestParam String profileId, @RequestParam String albVersion) {
+        String result = "{success:true}";
+        logger.debug("||"+profileId);
+        logger.debug("||"+albVersion); //disregard this
+
+
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+    }
+
+
+        @RequestMapping(value = "insertFullProfile.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> insertFullProfile(@RequestParam String dataArray, @RequestParam String profileId, @RequestParam String albVersion) {
+        String result = "{success:true}";
+        logger.debug("||"+profileId);
+        logger.debug("||"+albVersion); //disregard this
+
+        try {
+
+            org.springframework.security.core.userdetails.User user = (org.springframework.security.core.userdetails.User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+            //insert new profile
+            //TODO check return statement
+
+            ProfileGridObject profileGridObject = new ProfileGridObject();
+            profileGridObject.setProfileId(profileId);
+            profileGridObject.setTranslateStatus("Pending");
+            profileGridObject.setDeployStatus("Pending");
+
+            //check if profile exist first (any version)
+            List<ProfileGridObject> checkExists = service.checkProfileExists(profileId);
+
+            if(checkExists != null && checkExists.size() > 0){
+                long albVersionLong = service.getTopAlbVersion(profileId);
+                logger.debug("XXVERSION (before increment):"+albVersion);
+                albVersion = Long.toString(albVersionLong+1);
+            }else{
+                logger.debug("XXVERSION setting to 1");
+                albVersion = "1";
+            }
+
+            profileGridObject.setAlbVersion(albVersion);
+            profileGridObject.setAlbUser(user.getUsername());
+            profileGridObject.setCustomFields(CUSTOM_FIELDS);
+            profileGridObject.setProfileAlarmProcessing(profileId);
+            profileGridObject.setControlFileAlarmIdentifier(profileId+ALARM_IDENTIFIER_SUFFIX);
+            profileGridObject.setControlFileParameterExtraction(profileId+PARAMETER_EXTRACT_SUFFIX);
+
+
+            SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            String today = sf.format(new Date());
+            logger.debug("today is:"+today);
+
+
+            profileGridObject.setDateCreated(today);
+
+            logger.info("Inserting Profile: " + profileGridObject.toString());
+            service.insertNewProfile(profileGridObject);
+
+
+            //end insert profile
+
+
+            //insert selection control information into table (now hardcoded albeit blank at the moment)
+            SelectionControlGridObject selectionControlGridObject = new SelectionControlGridObject();
+            selectionControlGridObject.setProfileId(profileId);
+            selectionControlGridObject.setAccessModule("");
+            selectionControlGridObject.setGlobalClass("");
+            selectionControlGridObject.setDomains("");
+            selectionControlGridObject.setNodeName("");
+            selectionControlGridObject.setSubclass("");
+            selectionControlGridObject.setOriginalAlarmRemain("");
+            selectionControlGridObject.setManagedObjectDiscriminator("");
+            selectionControlGridObject.setAlbVersion(albVersion);
+            selectionControlGridObject.setAlbUser(user.getUsername());
+
+            selectionControlGridObject.setDateCreated(today);
+
+            service.insertNewSelectionControl(selectionControlGridObject);
+
+
+
+//            //increment  albVersion
+//            int versionNumber = Integer.parseInt(albVersion);
+//            albVersion = Integer.toString(versionNumber++);
+//            logger.debug("new version: "+albVersion);
+
+            logger.debug("new version: "+albVersion);
+
+
+            JSONObject mainObj = new JSONObject(dataArray);
+            JSONArray jsonMainArr = mainObj.getJSONArray(JSON_POST_VALUE);
+
+
+            logger.info("JSON Array: " + jsonMainArr.toString());
+            for (int i = 0; i < jsonMainArr.length(); i++) {
+                JSONObject childJSONObject = jsonMainArr.getJSONObject(i);
+
+                String arrayName = "";
+
+                switch (i){
+                    case 30:{ //effectively skip this case
+                        arrayName = JSON_SELECTION_CONTROL;
+                        JSONArray selectionArray = childJSONObject.getJSONArray(arrayName);
+                        logger.info("CHILD ARRAY: "+childJSONObject.toString());
+
+                        for (int j = 0; j < selectionArray.length(); j++) {
+
+                            JSONObject grandChildJSONObject = selectionArray.getJSONObject(j);
+
+                            logger.info("GRANDCHILD ARRAY: "+grandChildJSONObject.toString());
+
+//                            SelectionControlGridObject selectionControlGridObject = new SelectionControlGridObject();
+//                            selectionControlGridObject.setProfileId(profileId);
+//                            selectionControlGridObject.setAccessModule(grandChildJSONObject.getString("accessModule"));
+//                            selectionControlGridObject.setGlobalClass(grandChildJSONObject.getString("globalClass"));
+//                            selectionControlGridObject.setDomains(grandChildJSONObject.getString("domains"));
+//                            selectionControlGridObject.setNodeName(grandChildJSONObject.getString("nodeName"));
+//                            selectionControlGridObject.setSubclass(grandChildJSONObject.getString("subclass"));
+//                            selectionControlGridObject.setOriginalAlarmRemain(grandChildJSONObject.getString("originalAlarmRemain"));
+//                            selectionControlGridObject.setManagedObjectDiscriminator(grandChildJSONObject.getString("managedObjectDiscriminator"));
+//                            selectionControlGridObject.setAlbVersion(albVersion);
+//                            selectionControlGridObject.setAlbUser(user.getUsername());
+//
+//                            selectionControlGridObject.setDateCreated(today);
+//
+//                            service.insertNewSelectionControl(selectionControlGridObject);
+
+                            //TODO error checking
+                        }
+                        break;
+                    }
+                    case 0:{
+                        arrayName = JSON_PARAMETER_EXTRACT;
+                        JSONArray parameterArray = childJSONObject.getJSONArray(arrayName);
+                        logger.info("CHILD ARRAY: "+childJSONObject.toString());
+
+                        for (int j = 0; j < parameterArray.length(); j++) {
+
+                            JSONObject grandChildJSONObject = parameterArray.getJSONObject(j);
+
+                            logger.info("GRANDCHILD ARRAY: "+grandChildJSONObject.toString());
+
+                            ParameterExtractGridObject parameterExtractGridObject = new ParameterExtractGridObject();
+                            parameterExtractGridObject.setProfileId(profileId);
+                            parameterExtractGridObject.setTargetAlarmParameter(grandChildJSONObject.getString("targetAlarmParameter"));
+                            parameterExtractGridObject.setSourceAlarmParameter(grandChildJSONObject.getString("sourceAlarmParameter"));
+                            parameterExtractGridObject.setKeyword(grandChildJSONObject.getString("keyword"));
+                            parameterExtractGridObject.setExtractAfterKeyword(grandChildJSONObject.getString("extractAfterKeyword"));
+                            parameterExtractGridObject.setPostProcessing(grandChildJSONObject.getString("postProcessing"));
+                            parameterExtractGridObject.setAlbVersion(albVersion);
+                            parameterExtractGridObject.setAlbUser(user.getUsername());
+
+                            parameterExtractGridObject.setDateCreated(today);
+
+                            service.insertNewParameterExtract(parameterExtractGridObject);
+                            //TODO Error checking
+                        }
+                        break;
+                    }
+                    case 1:{
+                        arrayName = JSON_ALARM_IDENTIFICATION;
+                        JSONArray alarmArray = childJSONObject.getJSONArray(arrayName);
+                        logger.info("CHILD ARRAY: "+childJSONObject.toString());
+
+                        for (int j = 0; j < alarmArray.length(); j++) {
+
+                            JSONObject grandChildJSONObject = alarmArray.getJSONObject(j);
+
+                            logger.info("GRANDCHILD ARRAY: "+grandChildJSONObject.toString());
+
+                            AlarmIdentifierGridObject alarmIdentifierGridObject = new AlarmIdentifierGridObject();
+                            alarmIdentifierGridObject.setProfileId(profileId);
+                            alarmIdentifierGridObject.setEventId(grandChildJSONObject.getString("eventId"));
+                            alarmIdentifierGridObject.setVariables(grandChildJSONObject.getString("variables"));
+                            alarmIdentifierGridObject.setShowAlarm(grandChildJSONObject.getString("showAlarm"));
+                            alarmIdentifierGridObject.setDatabaseTable(grandChildJSONObject.getString("databaseTable"));
+                            alarmIdentifierGridObject.setDatabaseAccess(grandChildJSONObject.getString("databaseAccess"));
+                            alarmIdentifierGridObject.setTableColumns(grandChildJSONObject.getString("tableColumns"));
+                            alarmIdentifierGridObject.setAdditionalText(grandChildJSONObject.getString("additionalText"));
+                            alarmIdentifierGridObject.setProbableCause(grandChildJSONObject.getString("probableCause"));
+                            alarmIdentifierGridObject.setPerceivedSeverity(grandChildJSONObject.getString("perceivedSeverity"));
+                            alarmIdentifierGridObject.setAlarmType(grandChildJSONObject.getString("alarmType"));
+                            alarmIdentifierGridObject.setUserText(grandChildJSONObject.getString("userText"));
+                            alarmIdentifierGridObject.setLabel1(grandChildJSONObject.getString("label1"));
+                            alarmIdentifierGridObject.setLabel2(grandChildJSONObject.getString("label2"));
+                            alarmIdentifierGridObject.setLabel3(grandChildJSONObject.getString("label3"));
+                            alarmIdentifierGridObject.setLabel4(grandChildJSONObject.getString("label4"));
+                            alarmIdentifierGridObject.setLabel5(grandChildJSONObject.getString("label5"));
+                            alarmIdentifierGridObject.setLabel6(grandChildJSONObject.getString("label6"));
+                            alarmIdentifierGridObject.setLabel7(grandChildJSONObject.getString("label7"));
+                            alarmIdentifierGridObject.setLabel8(grandChildJSONObject.getString("label8"));
+                            alarmIdentifierGridObject.setLabel9(grandChildJSONObject.getString("label9"));
+                            alarmIdentifierGridObject.setLabel10(grandChildJSONObject.getString("label10"));
+                            alarmIdentifierGridObject.setAlbVersion(albVersion);
+                            alarmIdentifierGridObject.setAlbUser(user.getUsername());
+
+                            alarmIdentifierGridObject.setDateCreated(today);
+
+                            service.insertNewAlarmIdentifier(alarmIdentifierGridObject);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return new ResponseEntity<String>(result, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            result = "{success:false}";
+            return new ResponseEntity<String>(result, HttpStatus.OK);
+        }
+    }
+
+
+    /**
+     * profileId or filename?
+     * NOTE: ProcessBuilder is not synchronized!
+     *
+     * TODO: directory of script needs to be considered, not it is in \bin directory of java
+     *
+     * @param profileId
+     * @param albVersion
+     * @return
+     */
+    @RequestMapping(value = "executeScript.htm", method = RequestMethod.POST, headers = "Accept=application/json")
+    @ResponseBody
+    public ResponseEntity<String> executeScript(@RequestParam String scriptName, @RequestParam String profileId, @RequestParam String albVersion) {
+        String result = "{\"success\":";
+
+
+        //translate the script name to the actual script name
+        if("1".equals(scriptName)){
+            scriptName = SCRIPT_NAME;
+        }else{
+            scriptName = SCRIPT_NAME;
+        }
+
+        ProcessBuilder pb = new ProcessBuilder(scriptName, profileId, albVersion);
+
+        //scriptName = use constants, like '1', '2' instead of the actual scriptname
+
+        try {
+            Process p = pb.start();
+
+            InputStream in = null;
+            String scriptResult = "";
+
+            in = p.getInputStream(); //TODO stringbuffer is better
+            scriptResult = convertStreamToStr(in);
+
+            System.out.println("result?: \n"+scriptResult);
+            in.close();
+            String escaped = StringEscapeUtils.escapeJavaScript(scriptResult);
+            System.out.println("escaped result?: \n"+escaped);
+
+            result+="true, \"data\":{\"result\":\""+escaped+"\"}}";
+
+        } catch (IOException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            result+="false}";
+        }
+
+
+        return new ResponseEntity<String>(result, HttpStatus.OK);
+    }
+
+
+    /**
+     *
+     * @param is
+     * @return
+     * @throws IOException
+     */
+    public static String convertStreamToStr(InputStream is) throws IOException {
+
+        if (is != null) {
+            Writer writer = new StringWriter();
+
+            char[] buffer = new char[1024];
+            try {
+                Reader reader = new BufferedReader(new InputStreamReader(is,
+                        "UTF-8"));
+                int n;
+                while ((n = reader.read(buffer)) != -1) {
+                    writer.write(buffer, 0, n);
+                }
+            } finally {
+                is.close();
+            }
+            return writer.toString();
+        }
+        else {
+            return "";
+        }
+    }
+
+}
+

@@ -1,0 +1,17 @@
+#localdev
+#script.outputdir=C:\\testelito
+#script.install.filename=install
+#script.update.filename=file.bat
+#script.preview.filename=file.bat
+#script.translatecsv.filename=C:\\testelito\\file.bat
+
+
+#dev
+
+script.outputdir=/usr/opt/temip/ALB
+script.install.filename=install
+script.update.filename=update
+script.preview.filename=/usr/opt/temip/bin/test_mapping.pl
+script.translatecsv.filename=/usr/opt/temip/bin/translate_csv_files.pl
+
+

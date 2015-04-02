@@ -1,0 +1,94 @@
+package com.hp.temip.alb_gui.controller;
+
+import com.hp.temip.alb_gui.domain.AlbReferenceObject;
+import com.hp.temip.alb_gui.service.AlbReferenceService;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.HashMap;
+import java.util.List;
+
+/**
+ * Copyright Hewlett Packard Sales (M) Sdn Bhd
+ * User: Thaniswaran Raja Goval
+ * Email: thaniswaran.raja-goval@hp.com
+ * Date: 9/25/13
+ * Time: 11:59 AM
+ * Project: $(PROJECT_NAME)
+ * Package: com.hp.temip.alb_gui.controller
+ */
+
+@Controller
+public class AlbReferenceController {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    private AlbReferenceService albReferenceService;
+
+    @Autowired
+    public void setAlbReferenceService(AlbReferenceService service){
+        this.albReferenceService = service;
+    }
+
+    @RequestMapping(value = "/getAccessModuleList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getAccessModuleList() {
+        List<AlbReferenceObject> albReferenceObjects = albReferenceService.getAccessModuleList();
+
+        HashMap<String, List<AlbReferenceObject>> modelMap = new HashMap<String, List<AlbReferenceObject>>();
+        modelMap.put("albref", albReferenceObjects);
+        logger.debug(albReferenceObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "/getShowAlarmList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getShowAlarmList() {
+        List<AlbReferenceObject> albReferenceObjects = albReferenceService.getShowAlarmList();
+
+        HashMap<String, List<AlbReferenceObject>> modelMap = new HashMap<String, List<AlbReferenceObject>>();
+        modelMap.put("albref", albReferenceObjects);
+        logger.debug(albReferenceObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "/getPerceivedSeverityList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getPerceivedSeverityList() {
+        List<AlbReferenceObject> albReferenceObjects = albReferenceService.getPerceivedSeverityList();
+
+        HashMap<String, List<AlbReferenceObject>> modelMap = new HashMap<String, List<AlbReferenceObject>>();
+        modelMap.put("albref", albReferenceObjects);
+        logger.debug(albReferenceObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "/getProbableCauseList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getProbableCauseList() {
+        List<AlbReferenceObject> albReferenceObjects = albReferenceService.getProbableCauseList();
+
+        HashMap<String, List<AlbReferenceObject>> modelMap = new HashMap<String, List<AlbReferenceObject>>();
+        modelMap.put("albref", albReferenceObjects);
+        logger.debug(albReferenceObjects);
+        return modelMap;
+    }
+
+    @RequestMapping(value = "/getAlarmTypeList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getAlarmTypeList() {
+        List<AlbReferenceObject> albReferenceObjects = albReferenceService.getAlarmTypeList();
+
+        HashMap<String, List<AlbReferenceObject>> modelMap = new HashMap<String, List<AlbReferenceObject>>();
+        modelMap.put("albref", albReferenceObjects);
+        logger.debug(albReferenceObjects);
+        return modelMap;
+    }
+
+
+}

@@ -1,0 +1,121 @@
+function subDate(o, days) {
+    return new Date(o.getFullYear(), o.getMonth(), o.getDate() - days);
+}
+
+function getUserAccessChart() {
+
+    Ext.require('Ext.chart.*');
+    Ext.require(['Ext.Window', 'Ext.fx.target.Sprite', 'Ext.layout.container.Fit', 'Ext.window.MessageBox']);
+
+    var userAccessChartStore = new Ext.data.JsonStore({
+        storeId:'AccessChart',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getUserAccessChart.htm',
+            reader:{
+                type:'json',
+                root:'accessChartData'
+            }
+        },
+
+        fields:['time', 'dataSet1', 'dataSet2', 'dataSet3', 'dataSet4']
+    });
+
+
+    var userAccessChart = Ext.create('Ext.chart.Chart', {
+        id:'userAccessStatisticChart',
+        xtype:'chart',
+        style:'background:#fff',
+        animate:true,
+        shadow:true,
+        theme:'Blue',
+        store:userAccessChartStore,
+        legend:{
+            position:'right'
+        },
+        axes:[
+            {
+                type:'Numeric',
+                position:'bottom',
+                fields:['dataSet1', 'dataSet2', 'dataSet3', 'dataSet4'],
+                minimum:0,
+                label:{
+                    renderer:Ext.util.Format.numberRenderer('0,0')
+                },
+                grid:true,
+                title:'Access Count (Qty)'
+            },
+            {
+                type:'Category',
+                position:'left',
+                fields:['time'],
+                title:'Time (Hourly)'
+            }
+        ],
+        series:[
+            {
+                type:'bar',
+                axis:'bottom',
+                xField:'time',
+                yField:['dataSet4', 'dataSet3', 'dataSet2', 'dataSet1'],
+                title:[(new Date()).toDateString(), subDate(new Date(),1).toDateString(), subDate(new Date(),2).toDateString(), subDate(new Date(),3).toDateString()]
+            }
+        ]
+    });
+
+    var userAccessChartGrid = Ext.create('Ext.grid.Panel', {
+        id:'userAccessStatisticGrid',
+        region:'north',
+        height:300,
+        store:userAccessChartStore,
+        columns:[
+            Ext.create('Ext.grid.RowNumberer'),
+            {text:"Time", flex:1, sortable:true, dataIndex:'time'},
+            {text:(new Date()).toDateString(), flex:1, sortable:true, dataIndex:'dataSet1'},
+            {text:subDate(new Date(),1).toDateString(), flex:1, sortable:true, dataIndex:'dataSet2'},
+            {text:subDate(new Date(),2).toDateString(), flex:1, sortable:true, dataIndex:'dataSet3'},
+            {text:subDate(new Date(),3).toDateString(), flex:1, sortable:true, dataIndex:'dataSet4'}
+        ],
+        columnLines:true,
+        collapsible:false,
+        title:'User Access Statistic',
+        iconCls:'icon-grid',
+        autoScroll:true,
+        tbar:[
+            {
+                xtype:'button',
+                text:'Refresh',
+                iconCls: 'icon-refresh',
+                handler:function () {
+                    userAccessChartStore.reload();
+                }
+            }
+        ]
+    });
+
+    var chartPanel = Ext.create('Ext.Panel', {
+        id: 'chart-panel',
+        layout: 'fit',
+        region:'center',
+
+        items: [ userAccessChart]});
+
+    var statisticReport = Ext.create('Ext.Panel', {
+        id: 'userReport-panel',
+        layout: {
+            type: 'border',
+            padding: 0
+        },
+        items: [ userAccessChartGrid, chartPanel],
+        listeners:{
+            activate: function(grid,eOpts) {
+                userAccessChartStore.reload();
+            }
+        }
+
+    });
+
+    return statisticReport;
+
+}

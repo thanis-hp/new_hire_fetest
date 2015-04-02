@@ -1,0 +1,409 @@
+var link_objects;
+var pathArrays = new Array();
+var multicastPathArrays = new Array();
+var tempPathArrays = new Array();
+var leafNodes = new Array();
+var multiCastLeafNodes = new Array();
+
+var isVobb;
+function findAltPath(path_,borderPath_,isVobb_){
+    var isHealthyPathExist = false;
+    var isMultiCastHealthyPathExist = false;
+    isVobb = isVobb_;
+    pathArrays = new Array();
+    multicastPathArrays = new Array();
+    tempPathArrays = new Array();
+    leafNodes = new Array();
+    multiCastLeafNodes = new Array();
+    var nodesArrays = new Array();
+
+    var isFirstNode = true;
+    link_objects = cw.surface.getGroup('link_object');
+    var count = 0;
+    var root;
+
+    // Getting all the nodes
+    for (node_type in path_.nodes) {
+        for (nodes in path_.nodes[node_type]) {
+            var node_id = path_.nodes[node_type][nodes].node_name;
+            if (getIndex(nodesArrays, node_id) == -1) {
+                nodesArrays.push(node_id);
+            }
+        }
+    }
+
+    if (Ext.getCmp('servicesCombo').getDisplayValue() == 'IPTV'){
+        // FInd out the leaf nodes to find out arrays Length
+        getLeafNodes(nodesArrays, path_,borderPath_);
+        getMultiCastLeafNodes(leafNodes, path_,borderPath_);
+    }else{
+        // FInd out the leaf nodes to find out arrays Length
+        getLeafNodes(nodesArrays, path_,borderPath_);
+    }
+
+    // build unicast/non IPTV paths
+    for (i = 0; i < leafNodes.length; i++){
+        buildLinearArray(i,leafNodes[i],path_);
+    }
+
+    // Prepare the pathArray: from root to leafnode
+    for (var i = 0; i < tempPathArrays.length; i++ ){
+        var temp= new Array();
+        var k = 0;
+        for (j = tempPathArrays[i].length-1; j >= 0; j--){
+            temp[k] = tempPathArrays[i][j];
+            k++;
+        }
+        pathArrays[i] = temp;
+    }
+
+    // build multicast paths  & Prepare the pathArray: from root to leafnode
+    if (Ext.getCmp('servicesCombo').getDisplayValue() == 'IPTV'){
+        tempPathArrays = new Array();
+        for (i = 0; i < multiCastLeafNodes.length; i++){
+            buildMutlicastLinearArray(i,multiCastLeafNodes[i],path_);
+        }
+
+        // Prepare the pathArray: from root to leafnode
+        for (var i = 0; i < tempPathArrays.length; i++ ){
+            var temp= new Array();
+            var k = 0;
+            for (j = tempPathArrays[i].length-1; j >= 0; j--){
+                temp[k] = tempPathArrays[i][j];
+                k++;
+            }
+            multicastPathArrays[i] = temp;
+        }
+    }
+
+    if (Ext.getCmp('servicesCombo').getDisplayValue() == 'IPTV'){
+        for (var i = 0; i < multicastPathArrays.length; i++){
+            borderNode = multicastPathArrays[i][multicastPathArrays[i].length-1];
+            while('NA' != borderNode){
+                borderNode = getBorderNodes(borderNode,borderPath_);
+                if ('NA' != borderNode){
+                    multicastPathArrays[i][multicastPathArrays[i].length] = borderNode;
+                }
+            }
+        }
+    }else {
+        for (var i = 0; i < pathArrays.length; i++){
+            var borderNode = pathArrays[i][pathArrays[i].length-1];
+            while('NA' != borderNode){
+                borderNode = getBorderNodes(borderNode,borderPath_);
+                if ('NA' != borderNode){
+                    pathArrays[i][pathArrays[i].length] = borderNode;
+                }
+            }
+        }
+    }
+
+    for (var i = 0; i < pathArrays.length; i++){
+        markLine(pathArrays[i]);
+    }
+
+    if (Ext.getCmp('servicesCombo').getDisplayValue() == 'IPTV'){
+        for (var i = 0; i < multicastPathArrays.length; i++){
+            markLine(multicastPathArrays[i]);
+        }
+    }
+
+    for (var i = 0; i < pathArrays.length; i++){
+        if (checkHealth(pathArrays[i])){
+            isHealthyPathExist = markHealthyLine(pathArrays[i]);
+            if (isHealthyPathExist)
+                break;
+        }
+
+    }
+
+    if (Ext.getCmp('servicesCombo').getDisplayValue() == 'IPTV'){
+        for (var i = 0; i < multicastPathArrays.length; i++){
+            if (checkHealth(multicastPathArrays[i])){
+                isMultiCastHealthyPathExist = markHealthyLine(multicastPathArrays[i]);
+                if (isMultiCastHealthyPathExist)
+                    break;
+            }
+
+        }
+    }
+    isHealthyPathExist = Ext.getCmp('servicesCombo').getDisplayValue() == 'IPTV' ?  isMultiCastHealthyPathExist : isHealthyPathExist;
+    if (!isHealthyPathExist){
+        if (isVobb){
+            cw.surface.getGroup("vobb_border_node_object").each(function (item, id, len) {
+                cw.surface.remove(item, true);
+            });
+
+
+            cw.surface.getGroup("link_object").each(function (item, id, len) {
+                if (item.id.substring(0,6) == 'vobb_border'){
+                    cw.surface.remove(item, true);
+                }
+            });
+        }
+        cw.surface.getGroup("border_node_object").each(function (item, id, len) {
+            cw.surface.remove(item, true);
+        });
+
+        cw.surface.getGroup("link_object").each(function (item, id, len) {
+            if (item.id.substring(0,6) == 'border'){
+                cw.surface.remove(item, true);
+            }
+        });
+    }
+
+    cw.surface.getGroup("border_node_object").each(function (item, id, len) {
+        item.el.on('contextmenu',function(e,t,eOpts){
+            e.preventDefault();
+
+
+            test = getIP(path, t.id);
+            if(test == 'NA') {Ext.Msg.alert('Cannot Ping','Ping feature for this node is not available'); return true;}
+            getContextMenu(t.id).showAt(e.getXY());
+            e.stopEvent();
+        });
+    });
+
+}
+
+function getIndex(array, value) {
+    for (var i = 0; i < array.length; i++) {
+        if (array[i] === value)
+            return i;
+    }
+    return -1;
+}
+
+function getLeafNodes(nodesArrays,path_,borderPath_){
+    var j = 0;
+    leafNodes = new Array();
+    for (i = 0; i < nodesArrays.length; i++) {
+        var node = nodesArrays[i];
+        var isParent = hasChild(node,path_,borderPath_);
+        if (!isParent){
+            leafNodes[j] = node;
+            j++;
+        }
+    }
+}
+
+function getMultiCastLeafNodes(leafNodes,path_,borderPath_){
+    var j = 0;
+    multiCastLeafNodes = new Array();
+    for (i = 0; i < leafNodes.length; i++) {
+        for (node_type in path_.nodes) {
+            for (nodes in path_.nodes[node_type]) {
+                var type = path_.nodes[node_type][nodes].type ;
+                if ((type == 'multicast') && (leafNodes[i] == path_.nodes[node_type][nodes].node_name)){
+                    multiCastLeafNodes[j] =  leafNodes[i];
+                    j++;
+                }
+            }
+        }
+    }
+}
+
+function hasChild(node,path_,borderPath_){
+    // Check for the node in path
+    //node = isVobb != true ? node : node.substring(0,node.length-2);
+    if (null != path_){
+        for (node_type in path_.nodes) {
+            for (nodes in path_.nodes[node_type]) {
+                var parent = path_.nodes[node_type][nodes].parent_node;
+                if (parent == node){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    return 'NA';
+}
+
+function getParent(node,path_){
+    for (node_type in path_.nodes) {
+        for (nodes in path_.nodes[node_type]) {
+            if ((path_.nodes[node_type][nodes].node_name == node) && (undefined != path_.nodes[node_type][nodes].parent_node)){
+                return path_.nodes[node_type][nodes].parent_node;
+            }
+        }
+    }
+    return 'NA';
+}
+
+function getmulticastParent(node,path_){
+    for (node_type in path_.nodes) {
+        for (nodes in path_.nodes[node_type]) {
+            var type = path_.nodes[node_type][nodes].type ;
+            if (type == 'multicast'){
+                if ((path_.nodes[node_type][nodes].node_name == node) && (undefined != path_.nodes[node_type][nodes].parent_node)){
+                    return path_.nodes[node_type][nodes].parent_node;
+                }
+            }
+        }
+    }
+    return 'NA';
+}
+
+function getBorderNodes(node,borderPath_){
+    for (node_type in borderPath_.nodes) {
+        for (nodes in borderPath_.nodes[node_type]) {
+            if (borderPath_.nodes[node_type][nodes].parent_node == node){
+                return isVobb != true ? borderPath_.nodes[node_type][nodes].node_name : borderPath_.nodes[node_type][nodes].node_name + '_2';
+            }
+        }
+    }
+    return 'NA';
+}
+
+function buildLinearArray(idx,leafNode,path_){
+   var i = 0;
+   var parent;
+   var child = leafNode;
+   //var child = isVobb != true ? leafNode : leafNode + '_2';
+   var temp = new Array();
+   temp[i] = isVobb != true ? child : child + '_2';
+   i++;
+   parent = child;
+   while('NA' != parent){
+       parent = getParent(child,path_);
+       if (parent != 'NA'){
+           temp[i] = isVobb != true ? parent : parent + '_2';
+           i++;
+           child = parent;
+       }
+   }
+   tempPathArrays[idx] = temp;
+}
+
+function buildMutlicastLinearArray(idx,leafNode,path_){
+    var i = 0;
+    var parent;
+    var child = leafNode;
+    //var child = isVobb != true ? leafNode : leafNode + '_2';
+    var temp = new Array();
+    temp[i] = isVobb != true ? child : child + '_2';
+    i++;
+    parent = child;
+    parent = getmulticastParent(child,path_);
+    if (parent != 'NA'){
+        temp[i] = isVobb != true ? parent : parent + '_2';
+        i++;
+        child = parent;
+    }
+    while('NA' != parent){
+        parent = getParent(child,path_);
+        if (parent != 'NA'){
+            temp[i] = isVobb != true ? parent : parent + '_2';
+            i++;
+            child = parent;
+        }
+    }
+    tempPathArrays[idx] = temp;
+}
+
+function markLine(pathArr){
+    for (var i = 0; i < pathArr.length-1; i++){
+        for (idx in linkArray) {
+            var node = pathArr[i];
+            var nextNode = pathArr[i+1];
+            if ((node == linkArray[idx][1].split(':')[0]) && (nextNode == linkArray[idx][2].split(':')[0])){
+
+                var link_object = link_objects.findBy(
+                    function(items, key){
+                        if(key === linkArray[idx][0] ){
+                            return true;
+                        }
+                        return false;
+                    }
+                );
+                if ((undefined != link_object) && (null != link_object)){
+                    link_object.setAttributes({'stroke-dasharray':2},true);
+                }
+            }
+        }
+    }
+}
+
+function checkHealth(healthyArr){
+    for (var i = 0; i < healthyArr.length-1; i++){
+        for (idx in linkArray) {
+            var node = healthyArr[i];
+            var nextNode = healthyArr[i+1];
+            if ((node == linkArray[idx][1].split(':')[0]) && (nextNode == linkArray[idx][2].split(':')[0])){
+                if ((linkArray[idx][3] != '0') || (linkArray[idx][4] != '0') || (linkArray[idx][5] != '0')){
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+function markHealthyLine(healthyArr) {
+    var isHealthyPathFound = false;
+    for (var i = 0; i < healthyArr.length - 1; i++) {
+        for (idx in linkArray) {
+            var node = healthyArr[i];
+            var nextNode = healthyArr[i+1];
+            if ((node == linkArray[idx][1].split(':')[0]) && (nextNode == linkArray[idx][2].split(':')[0])) {
+                var link_object = link_objects.findBy(
+                    function (items, key) {
+                        if (key === linkArray[idx][0]) {
+                            return true;
+                        }
+                        return false;
+                    }
+                );
+                if ((undefined != link_object) && (null != link_object)) {
+                    link_object.setAttributes({'stroke-dasharray':0}, true);
+                    isHealthyPathFound = true;
+                }
+            }
+
+        }
+    }
+
+    if (isVobb){
+        cw.surface.getGroup("vobb_border_node_object").each(function (item, id, len) {
+            cw.surface.remove(item, true);
+        });
+
+
+        cw.surface.getGroup("link_object").each(function (item, id, len) {
+            if (item.id.substring(0,6) == 'vobb_border'){
+                cw.surface.remove(item, true);
+            }
+        });
+    }else{
+        cw.surface.getGroup("border_node_object").each(function (item, id, len) {
+            cw.surface.remove(item, true);
+        });
+
+
+        cw.surface.getGroup("link_object").each(function (item, id, len) {
+            if (item.id.substring(0,6) == 'border'){
+                cw.surface.remove(item, true);
+            }
+        });
+    }
+
+    for (var index in healthyArr) {
+        if (undefined != borderArr[healthyArr[index]])
+            for (var p in borderArr[healthyArr[index]]) {
+                cw.surface.add(
+                    Ext.create('Ext.draw.Sprite',
+                        borderArr[healthyArr[index]][p])).show(true);
+
+
+            }
+    }
+
+    for (var j in borderDetailArr){
+        var tip = Ext.create('Ext.tip.ToolTip', borderDetailArr[j]);
+    }
+    return isHealthyPathFound;
+}
+
+
+

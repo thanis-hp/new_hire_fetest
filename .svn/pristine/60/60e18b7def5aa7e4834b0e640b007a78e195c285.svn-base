@@ -1,0 +1,75 @@
+package com.hp.temip.alb_gui.domain;
+
+/**
+ * Copyright Hewlett Packard Sales (M) Sdn Bhd
+ * User: Thaniswaran Raja Goval
+ * Email: thaniswaran.raja-goval@hp.com
+ * Date: 9/1/13
+ * Time: 2:23 AM
+ * Project: $(PROJECT_NAME)
+ * Package: com.hp.temip.alb_gui.domain
+ */
+public class AlarmGridObject {
+
+    private String alarmName;
+
+    private String alarmText;
+
+    private String alarmRemark;
+
+
+    public String getAlarmName() {
+        return alarmName;
+    }
+
+    public void setAlarmName(String alarmName) {
+        this.alarmName = alarmName;
+    }
+
+    public String getAlarmText() {
+        return alarmText;
+    }
+
+    public void setAlarmText(String alarmText) {
+        this.alarmText = alarmText;
+    }
+
+    public String getAlarmRemark() {
+        return alarmRemark;
+    }
+
+    public void setAlarmRemark(String alarmRemark) {
+        this.alarmRemark = alarmRemark;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof AlarmGridObject)) return false;
+
+        AlarmGridObject that = (AlarmGridObject) o;
+
+        if (!alarmName.equals(that.alarmName)) return false;
+        if (!alarmRemark.equals(that.alarmRemark)) return false;
+        if (!alarmText.equals(that.alarmText)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = alarmName.hashCode();
+        result = 31 * result + alarmText.hashCode();
+        result = 31 * result + alarmRemark.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "AlarmGridObject{" +
+                "alarmName='" + alarmName + '\'' +
+                ", alarmText='" + alarmText + '\'' +
+                ", alarmRemark='" + alarmRemark + '\'' +
+                '}';
+    }
+}

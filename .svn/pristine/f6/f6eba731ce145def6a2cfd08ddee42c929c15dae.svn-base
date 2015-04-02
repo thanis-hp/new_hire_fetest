@@ -1,0 +1,41 @@
+package com.hp.temip.alb_gui.domain;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 10/14/13
+ * Time: 11:34 AM
+ * To change this template use File | Settings | File Templates.
+ */
+public class Host {
+
+    private int hostId;
+
+    private String hostName;
+    private String hostIp;
+
+
+    public int getHostId() {
+        return hostId;
+    }
+
+    public void setHostId(int hostId) {
+        this.hostId = hostId;
+    }
+
+    public String getHostName() {
+        return hostName;
+    }
+
+    public void setHostName(String hostName) {
+        this.hostName = hostName;
+    }
+
+    public String getHostIp() {
+        return hostIp;
+    }
+
+    public void setHostIp(String hostIp) {
+        this.hostIp = hostIp;
+    }
+}

@@ -1,0 +1,660 @@
+Ext.require(['*']);
+
+function getProfileManagementMain(){
+//GRID STARTS HERE
+Ext.QuickTips.init();
+
+// setup the state provider, all state information will be saved to a cookie
+Ext.state.Manager.setProvider(Ext.create('Ext.state.CookieProvider'));
+
+// sample static data for the store
+var profileGridData = [
+    ['Profile1','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending'],
+    ['Profile2','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending']
+];
+
+
+
+
+// create the data store
+var profileGridStore = Ext.create('Ext.data.ArrayStore', {
+    fields: [
+        {name: 'profileName'},
+        {name: 'dateCreated',      type: 'date', dateFormat: 'n/j h:ia'},
+        {name: 'dateModified',     type: 'date', dateFormat: 'n/j h:ia'},
+        {name: 'translateStatus'},
+        {name: 'deployStatus'}
+    ],
+    data: profileGridData
+});
+
+    // create the Grid
+    var profileGrid = Ext.create('Ext.grid.Panel', {
+    id: 'profileManagement-panel',
+    frame: true,
+    store: profileGridStore,
+    stateful: true,
+    stateId: 'stateGrid',
+    sealedColumns: true,
+    enableColumnMove: false,
+    enableColumnResize: false,
+    columns: [
+        {
+            text     : 'Profile Name',
+            flex     : 1,
+            sortable : false,
+            dataIndex: 'profileName'
+        },
+        {
+            text     : 'Date Created',
+            width    : 85,
+            sortable : true,
+            renderer : Ext.util.Format.dateRenderer('m/d/Y'),
+            dataIndex: 'dateCreated'
+        },
+        {
+            text     : 'Date Modified',
+            width    : 85,
+            sortable : true,
+            renderer : Ext.util.Format.dateRenderer('m/d/Y'),
+            dataIndex: 'dateModified'
+        },
+        {
+            text     : 'Translate Status',
+            width    : 90,
+            sortable : true,
+            dataIndex: 'translateStatus'
+        },
+        {
+            text     : 'Deploy Status',
+            width    : 90,
+            sortable : true,
+            dataIndex: 'deployStatus'
+        },
+        {
+            xtype: 'actioncolumn',
+            text: 'Actions',
+            width: 50,
+            items: [{
+                icon   : '../images/save.png',  // Use a URL in the icon config
+                tooltip: 'Save Files',
+                handler: function(grid, rowIndex, colIndex) {
+                    var rec = profileGridStore.getAt(rowIndex);
+
+                    Ext.MessageBox.show({
+                        title:'Save '+rec.get('profileName'),
+                        msg:'Are you sure?',
+                        buttons:Ext.MessageBox.OKCANCEL,
+                        fn:function (btn) {
+                            if (btn == 'ok') {
+
+                            }
+                        },
+                        //animateTarget:'tree-panel',
+                        icon:Ext.MessageBox.QUESTION
+                    });
+                }
+            },{
+                icon   : '../images/information.png',  // Use a URL in the icon config
+                tooltip: 'Preview',
+                handler: function(grid, rowIndex, colIndex) {
+                    var rec = profileGridStore.getAt(rowIndex);
+
+                    Ext.MessageBox.show({
+                        title:'Preview '+rec.get('profileName'),
+                        msg:'Are you sure?',
+                        buttons:Ext.MessageBox.OKCANCEL,
+                        fn:function (btn) {
+                            if (btn == 'ok') {
+
+                            }
+                        },
+                        //animateTarget:'tree-panel',
+                        icon:Ext.MessageBox.QUESTION
+                    });
+                }
+            },{
+                icon   : '../images/application_go.png',  // Use a URL in the icon config
+                tooltip: 'Deploy',
+                handler: function(grid, rowIndex, colIndex) {
+                    var rec = profileGridStore.getAt(rowIndex);
+
+                    Ext.MessageBox.show({
+                        title:'Deploy '+rec.get('profileName'),
+                        msg:'Are you sure?',
+                        buttons:Ext.MessageBox.OKCANCEL,
+                        fn:function (btn) {
+                            if (btn == 'ok') {
+
+                            }
+                        },
+                        //animateTarget:'tree-panel',
+                        icon:Ext.MessageBox.QUESTION
+                    });
+                }
+            }
+
+//                    {
+//                    getClass: function(v, meta, rec) {          // Or return a class from a function
+//                        if (rec.get('change') < 0) {
+//                            this.items[1].tooltip = 'Hold stock';
+//                            return 'alert-col';
+//                        } else {
+//                            this.items[1].tooltip = 'Buy stock';
+//                            return 'buy-col';
+//                        }
+//                    },
+//                    handler: function(grid, rowIndex, colIndex) {
+//                        var rec = store.getAt(rowIndex);
+//                        alert((rec.get('change') < 0 ? "Hold " : "Buy ") + rec.get('profileName'));
+//                    }
+//                }
+            ]
+        }
+    ],
+    height: 350,
+    width: 700,
+    title: 'ALB Profile Management',
+    viewConfig: {
+        stripeRows: true
+    },
+    buttons: [{
+        text: 'Create New Profile',
+        handler:function () {
+            Ext.Msg.prompt('Profile Name', 'Please enter profile name:', function(btn, text, cfg) {
+                if(btn == 'ok' && Ext.isEmpty(text)) {
+                    var newMsg = '<span style="color:red">Please enter profile name:</span>';
+                    Ext.Msg.show(Ext.apply({}, { msg: newMsg }, cfg));
+                }
+            });
+        }
+
+
+    }]
+
+});
+
+    return profileGrid;
+}
+
+
+//individual grid functions for each of the three grids
+function getSelectionControl(){
+//GRID STARTS HERE
+    Ext.QuickTips.init();
+
+// setup the state provider, all state information will be saved to a cookie
+    Ext.state.Manager.setProvider(Ext.create('Ext.state.CookieProvider'));
+
+// sample static data for the store
+    var selectionControlGridData = [
+//        ['Profile1','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending'],
+//        ['Profile2','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending']
+    ];
+
+    /*
+     PROFILE_ID	VARCHAR
+     ACCESS_MODULE	VARCHAR
+     GLOBAL_CLASS	VARCHAR
+     DOMAINS	VARCHAR
+     NODE_NAME	VARCHAR
+     SUBCLASS	VARCHAR
+     ORIGINAL_ALARM_REMAIN	VARCHAR
+     PROFILE	VARCHAR
+     MANAGED_OBJECT_DISCRIMINATOR	VARCHAR
+     ALB_VERSION	VARCHAR
+     ALB_USER	VARCHAR
+     DATE_CREATED	DATETIME
+
+     */
+
+
+// create the data store
+    var selectionControlGridStore = Ext.create('Ext.data.ArrayStore', {
+        fields: [
+            {name: 'accessModule'},
+            {name: 'globalClass'},
+            {name: 'domains'},
+            {name: 'nodeName'},
+            {name: 'subclass'},
+            {name: 'originalAlarmRemain'}, //TODO: boolean
+            {name: 'managedObjectDiscriminator'},
+            {name: 'profileName'},
+            {name: 'dateCreated',      type: 'date', dateFormat: 'n/j h:ia'}
+        ],
+        data: selectionControlGridData
+    });
+
+    // create the Grid
+    var selectionControlGrid = Ext.create('Ext.grid.Panel', {
+        id: 'profileGrids-selection-panel',
+        frame: true,
+        store: selectionControlGridStore,
+        stateful: true,
+        stateId: 'stateGrid',
+        sealedColumns: true,
+        enableColumnMove: false,
+        enableColumnResize: false,
+        columns: [
+            {
+                text     : 'Access Module',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'accessModule'
+            },
+            {
+                text     : 'Global Class',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'globalClass'
+            },
+            {
+                text     : 'Domains',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'domains'
+            },
+            {
+                text     : 'Node Name',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'nodeName'
+            },
+            {
+                text     : 'Subclass',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'subclass'
+            },
+            {
+                text     : 'Original Alarm Remain?',
+//                xtype: 'checkcolumn',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'originalAlarmRemain'
+            },
+            {
+                text     : 'Managed Object Discriminator',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'managedObjectDiscriminator'
+            },
+            {
+                text     : 'Profile Name',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'profileName'
+            },
+            {
+                text     : 'Date Created',
+                width    : 85,
+                sortable : true,
+                renderer : Ext.util.Format.dateRenderer('m/d/Y'),
+                dataIndex: 'dateCreated'
+            }
+        ],
+        height: 200,
+        width: '100%',
+        title: 'Selection Control',
+        viewConfig: {
+            stripeRows: true
+        }
+    });
+
+    return selectionControlGrid;
+
+
+
+}
+
+
+function getParameterExtraction(){
+//GRID STARTS HERE
+    Ext.QuickTips.init();
+
+// setup the state provider, all state information will be saved to a cookie
+    Ext.state.Manager.setProvider(Ext.create('Ext.state.CookieProvider'));
+
+// sample static data for the store
+    var paramExtractGridData = [
+//        ['Profile1','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending'],
+//        ['Profile2','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending']
+    ];
+
+    /*
+     PROFILE_ID	VARCHAR
+     TARGET_ALARM_PARAMETER	VARCHAR
+     SOURCE_ALARM_PARAMETER	VARCHAR
+     KEYWORD	VARCHAR
+     EXTRACT_AFTER_KEYWORD	VARCHAR
+     POST_PROCESSING	VARCHAR
+     ALB_VERSION	VARCHAR
+     ALB_USER	VARCHAR
+     DATE_CREATED	DATETIME
+
+
+     */
+
+
+// create the data store
+    var paramExtractGridStore = Ext.create('Ext.data.ArrayStore', {
+        fields: [
+            {name: 'targetAlarm'},
+            {name: 'sourceAlarm'},
+            {name: 'keyword'},
+            {name: 'extractAfter'},
+            {name: 'postProcessing'},
+            {name: 'dateCreated',      type: 'date', dateFormat: 'n/j h:ia'}
+        ],
+        data: paramExtractGridData
+    });
+
+    // create the Grid
+    var paramExtractGrid = Ext.create('Ext.grid.Panel', {
+        id: 'profileGrids-paramextract-panel',
+        frame: true,
+        store: paramExtractGridStore,
+        stateful: true,
+        stateId: 'stateGrid',
+        sealedColumns: true,
+        enableColumnMove: false,
+        enableColumnResize: false,
+        columns: [
+            {
+                text     : 'Target Alarm Parameter',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'targetAlarm'
+            },
+            {
+                text     : 'Source Alarm Parameter',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'sourceAlarm'
+            },
+            {
+                text     : 'Keyword',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'keyword'
+            },
+            {
+                text     : 'Extract After Keyword',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'extractAfter'
+            },
+            {
+                text     : 'Post-processing',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'postProcessing'
+            },
+            {
+                text     : 'Date Created',
+                width    : 85,
+                sortable : true,
+                renderer : Ext.util.Format.dateRenderer('m/d/Y'),
+                dataIndex: 'dateCreated'
+            }
+        ],
+        height: 200,
+        width: '100%',
+        title: 'Parameter Extraction',
+        viewConfig: {
+            stripeRows: true
+        }
+    });
+
+    return paramExtractGrid;
+
+
+}
+
+function getAlarmIdentifier(){
+//GRID STARTS HERE
+    Ext.QuickTips.init();
+
+// setup the state provider, all state information will be saved to a cookie
+    Ext.state.Manager.setProvider(Ext.create('Ext.state.CookieProvider'));
+
+// sample static data for the store
+    var alarmIdentifierGridData = [
+//        ['Profile1','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending'],
+//        ['Profile2','9/1 12:00am', '9/1 12:00am', 'Pending',  'Pending']
+    ];
+
+    /*
+     PROFILE_ID	VARCHAR
+     EVENT-ID	VARCHAR
+     VARIABLES	VARCHAR
+     SHOW ALARM	VARCHAR
+     DATABASE TABLE	VARCHAR
+     DATABASE ACCESS	VARCHAR
+     TABLE COLUMNS	VARCHAR
+     ADDITIONAL TEXT	VARCHAR
+     PROBABLE CAUSE	VARCHAR
+     PERCEIVED SEVERITY	VARCHAR
+     ALARM TYPE	VARCHAR
+     USERTEXT	VARCHAR
+     LABEL1	VARCHAR
+     LABEL2	VARCHAR
+     LABEL 3	VARCHAR
+     LABEL4	VARCHAR
+     LABEL5	VARCHAR
+     LABEL6	VARCHAR
+     LABEL7	VARCHAR
+     LABEL8	VARCHAR
+     LABEL9	VARCHAR
+     LABEL10	VARCHAR
+     ALB_VERSION	VARCHAR
+     ALB_USER	VARCHAR
+     DATE_CREATED	DATETIME
+
+
+     */
+
+
+// create the data store
+    var alarmIdentifierGridStore = Ext.create('Ext.data.ArrayStore', {
+        fields: [
+            {name: 'eventId'},
+            {name: 'variables'},
+            {name: 'showAlarm'},
+            {name: 'databaseTable'},
+            {name: 'databaseAccess'},
+            {name: 'tableColumns'},
+            {name: 'additionalText'},
+            {name: 'probableCause'},
+            {name: 'perceivedSeverity'},
+            {name: 'alarmType'},
+            {name: 'userText'},
+            {name: 'label1'},
+            {name: 'label2'},
+            {name: 'label3'},
+            {name: 'label4'},
+            {name: 'label5'},
+            {name: 'label6'},
+            {name: 'label7'},
+            {name: 'label8'},
+            {name: 'label9'},
+            {name: 'label10'},
+            {name: 'dateCreated',      type: 'date', dateFormat: 'n/j h:ia'}
+        ],
+        data: alarmIdentifierGridData
+    });
+
+    // create the Grid
+    var alarmIdentifierGrid = Ext.create('Ext.grid.Panel', {
+        id: 'profileGrids-alarm-panel',
+        frame: true,
+        store: alarmIdentifierGridStore,
+        stateful: true,
+        stateId: 'stateGrid',
+        sealedColumns: true,
+        enableColumnMove: false,
+        enableColumnResize: false,
+        columns: [
+            {
+                text     : 'Event ID',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'eventId'
+            },
+            {
+                text     : 'Show Alarm',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'showAlarm'
+            },
+            {
+                text     : 'Database Table',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'databaseTable'
+            },
+            {
+                text     : 'Database Access',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'databaseAccess'
+            },
+            {
+                text     : 'Table Columns',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'tableColumns'
+            },
+            {
+                text     : 'Additional Text',
+                width    : 90,
+                sortable : true,
+                dataIndex: 'additionalText'
+            },
+            {
+                text     : 'Probable Cause',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'probableCause'
+            },
+            {
+                text     : 'Perceived Severity',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'perceivedSeverity'
+            },
+            {
+                text     : 'Alarm Type',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'alarmType'
+            },
+            {
+                text     : 'User Text',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'userText'
+            },
+            {
+                text     : 'Label 1',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'label1'
+            },
+            {
+                text     : 'Label 2',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'label2'
+            },
+            {
+                text     : 'Label 3',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'label3'
+            },
+            {
+                text     : 'Label 4',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'label4'
+            },
+            {
+                text     : 'Label 5',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'label5'
+            },
+            {
+                text     : 'Label 6',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'label6'
+            },
+            {
+                text     : 'Label 7',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'label7'
+            },
+            {
+                text     : 'Label 8',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'label8'
+            },
+            {
+                text     : 'Label 9',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'label9'
+            },
+            {
+                text     : 'Label 10',
+                flex     : 1,
+                sortable : false,
+                dataIndex: 'label10'
+            },
+            {
+                text     : 'Date Created',
+                width    : 85,
+                sortable : true,
+                renderer : Ext.util.Format.dateRenderer('m/d/Y'),
+                dataIndex: 'dateCreated'
+            }
+        ],
+        height: 200,
+        width: '100%',
+        title: 'Alarm Identifier',
+        viewConfig: {
+            stripeRows: true
+        }
+    });
+
+    return alarmIdentifierGrid;
+
+
+
+}
+
+
+
+
+function getProfileGrids(){
+    // Explicitly create a Container
+
+    var gridContainer = Ext.create('Ext.panel.Panel', {
+        layout: 'column',
+        id: 'profileGrids-panel',
+        width: '100%',
+        items:[getSelectionControl(),getParameterExtraction(),getAlarmIdentifier()]
+
+    });
+
+//    gridContainer.add(getAlarmIdentifier());
+//    gridContainer.add(getParameterExtraction());
+//    gridContainer.add(getSelectionControl());
+
+
+    return gridContainer;
+}

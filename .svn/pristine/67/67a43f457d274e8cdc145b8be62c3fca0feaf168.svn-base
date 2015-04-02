@@ -1,0 +1,521 @@
+var link_objects;
+var primaryArr1 = new Array();
+var primaryArr2 = new Array();
+var secondaryArr1 = new Array();
+var secondaryArr2 = new Array();
+
+var primaryMultiCast = new Array();
+var secondaryMultiCast = new Array();
+
+var primaryBRASArr = new Array();
+var secondaryBRASArr = new Array();
+
+var isVobb;
+function findAltPath(path_,borderPath_,isVobb_){
+    isVobb = isVobb_;
+    primaryArr1 = new Array();
+    primaryArr2 = new Array();
+    secondaryArr1 = new Array();
+    secondaryArr2 = new Array();
+    primaryMultiCast = new Array();
+    secondaryMultiCast = new Array();
+    primaryBRASArr = new Array();
+    secondaryBRASArr = new Array();
+
+    var isFirstNode = true;
+    //node_objects = cw.surface.getGroup('node_object');
+    link_objects = cw.surface.getGroup('link_object');
+    var count = 0;
+    var root;
+    var primBRASName, secBRASName;
+    for (node_type in path_.nodes) {
+        for (nodes in path_.nodes[node_type]) {
+
+            if (isFirstNode){
+                root = isVobb != true ? path_.nodes[node_type][nodes].node_name : path_.nodes[node_type][nodes].node_name + '_2';
+                primaryArr1[0] = new Array(2);
+                primaryArr1[0][0] = root;
+                primaryArr1[0][1] = '1';
+
+                primaryArr2[0] = new Array(2);
+                primaryArr2[0][0] = root;
+                primaryArr2[0][1] = '1';
+
+                secondaryArr1[0] = new Array(2);
+                secondaryArr1[0][0] = root;
+                secondaryArr1[0][1] = '0';
+
+                secondaryArr2[0] = new Array(2);
+                secondaryArr2[0][0] = root;
+                secondaryArr2[0][1] = '0';
+
+                isFirstNode = false;
+            }else if (node_type == 'NPE'){
+                var primary = path_.nodes[node_type][nodes].primary;
+                var node = isVobb != true ? path_.nodes[node_type][nodes].node_name : path_.nodes[node_type][nodes].node_name + '_2';
+                if (primary == 1){
+                    primaryArr1[1] = new Array(2);
+                    primaryArr1[1][0] = node;
+                    primaryArr1[1][1] = '1';
+
+                    primaryArr2[1] = new Array(2);
+                    primaryArr2[1][0] = node;
+                    primaryArr2[1][1] = '1';
+
+                    secondaryArr1[1] = new Array(2);
+                    secondaryArr1[1][0] = node;
+                    secondaryArr1[1][1] = '0';
+
+                    secondaryArr2[1] = new Array(2);
+                    secondaryArr2[1][0] = node;
+                    secondaryArr2[1][1] = '0';
+                }else{
+                    secondaryArr1[2] = new Array(2);
+                    secondaryArr1[2][0] = node;
+                    secondaryArr1[2][1] = '0';
+
+                    secondaryArr2[2] = new Array(2);
+                    secondaryArr2[2][0] = node;
+                    secondaryArr2[2][1] = '0';
+                }
+            }else if (node_type == 'BRAS'){
+                var primary = path_.nodes[node_type][nodes].primary;
+                var node = path_.nodes[node_type][nodes].node_name;
+                if (primary == 1){
+                    primaryArr1[2] = new Array(2);
+                    primaryArr1[2][0] = isVobb != true ? path_.nodes[node_type][nodes].node_name : path_.nodes[node_type][nodes].node_name + '_2';
+                    primaryArr1[2][1] = '1';
+
+                    primaryArr2[2] = new Array(2);
+                    primaryArr2[2][0] = isVobb != true ? path_.nodes[node_type][nodes].node_name : path_.nodes[node_type][nodes].node_name + '_2';
+                    primaryArr2[2][1] = '1';
+                    count++;
+                    primBRASName = node;
+                }else{
+                    secondaryArr1[3] = new Array(2);
+                    secondaryArr1[3][0] = isVobb != true ? path_.nodes[node_type][nodes].node_name : path_.nodes[node_type][nodes].node_name + '_2';;
+                    secondaryArr1[3][1] = '0';
+
+                    secondaryArr2[3] = new Array(2);
+                    secondaryArr2[3][0] = isVobb != true ? path_.nodes[node_type][nodes].node_name : path_.nodes[node_type][nodes].node_name + '_2';;
+                    secondaryArr2[3][1] = '0';
+                    isFirstNode = false;
+                    count++;
+                    secBRASName = node;
+                }
+            }
+        }
+        if (count == 2)
+            break;
+    }
+
+    getNode(3,path_,primBRASName);
+    getNode(4,path_,secBRASName);
+
+    fillLineArray(path_,borderPath_); // prepare the complet array
+
+    // Reset all the paths before activate the primary path
+    markLine(primaryArr1);
+    markLine(primaryArr2);
+    markLine(secondaryArr1);
+    markLine(secondaryArr2);
+
+    // make the active path to solid line
+    var isHealthyPathExist = false;
+    if (checkHealth(primaryArr1)){
+        isHealthyPathExist = true;
+        markHealthyLine(primaryArr1);
+    }else if (checkHealth(primaryArr2)){
+        isHealthyPathExist = true;
+        markHealthyLine(primaryArr2);
+    }else if (checkHealth(secondaryArr1)){
+        isHealthyPathExist = true;
+        markHealthyLine(secondaryArr1);
+    }else if (checkHealth(secondaryArr2)){
+        isHealthyPathExist = true;
+        markHealthyLine(secondaryArr2);
+    }
+
+    if (!isHealthyPathExist){
+        if (isVobb){
+            cw.surface.getGroup("vobb_border_node_object").each(function (item, id, len) {
+                cw.surface.remove(item, true);
+            });
+
+
+            cw.surface.getGroup("link_object").each(function (item, id, len) {
+                if (item.id.substring(0,6) == 'vobb_border'){
+                    cw.surface.remove(item, true);
+                }
+            });
+        }
+        cw.surface.getGroup("border_node_object").each(function (item, id, len) {
+            cw.surface.remove(item, true);
+        });
+
+        cw.surface.getGroup("link_object").each(function (item, id, len) {
+            if (item.id.substring(0,6) == 'border'){
+                cw.surface.remove(item, true);
+            }
+        });
+    }
+
+    // create arrays, make multicast paths dotted and make the active path to solid for IPTV multicast
+    var flag = true;
+    if (Ext.getCmp('servicesCombo').getRawValue() == 'IPTV'){
+        count = 0;
+        for (node_type in path_.nodes) {
+            for (nodes in path_.nodes[node_type]) {
+                var primary = path_.nodes[node_type][nodes].primary;
+                var parentNode = path_.nodes[node_type][nodes].parent_node;
+                var node = isVobb != true ? path_.nodes[node_type][nodes].node_name : path_.nodes[node_type][nodes].node_name + '_2';
+                var type = path_.nodes[node_type][nodes].type ;
+
+                if (type == 'multicast'){
+                    if (primary == '1'){
+                        primaryMultiCast[0] = new Array(2);
+                        primaryMultiCast[0][0] = parentNode;
+                        primaryMultiCast[0][1] = '1';
+
+                        primaryMultiCast[1] = new Array(2);
+                        primaryMultiCast[1][0] = node;
+                        primaryMultiCast[1][1] = '1';
+
+                        secondaryMultiCast[0] = new Array(2);
+                        secondaryMultiCast[0][0] = parentNode;
+                        secondaryMultiCast[0][1] = '0';
+                        count++;
+                    }else if (primary == 0){
+                        secondaryMultiCast[1] = new Array(2);
+                        secondaryMultiCast[1][0] = parentNode;
+                        secondaryMultiCast[1][1] = '0';
+
+                        secondaryMultiCast[2] = new Array(2);
+                        secondaryMultiCast[2][0] = node;
+                        secondaryMultiCast[2][1] = '0';
+                        count++;
+                    }
+
+                }
+            }
+            if (count == 2)
+                break;
+        }
+        fillMultiCastLineArray(borderPath_);
+        markLine(primaryMultiCast);
+        markLine(secondaryMultiCast);
+
+        if (checkHealth(primaryMultiCast)){
+            isHealthyPathExist = true;
+            markHealthyLine(primaryMultiCast);
+        }else if (checkHealth(secondaryMultiCast)){
+            isHealthyPathExist = true;
+            markHealthyLine(secondaryMultiCast);
+        }
+
+    }
+
+};
+
+function getNode(i,path_,name){
+    var isPrimFirstTime = true;
+    var isSecFirstTime = true;
+    for (node_type in path_.nodes) {
+        for (nodes in path_.nodes[node_type]) {
+            // alert(path.nodes[node_type][nodes].type);
+            var primary = path_.nodes[node_type][nodes].primary;
+            var parentNode = path_.nodes[node_type][nodes].parent_node;
+            var node = isVobb != true ? path_.nodes[node_type][nodes].node_name : path_.nodes[node_type][nodes].node_name + '_2';
+
+            if ( (primary == 1) && (parentNode == name)) {
+                if(isPrimFirstTime){
+                    primaryArr1[i] = new Array(2);
+                    primaryArr1[i][0] = node;
+                    primaryArr1[i][1] = '1';
+                    isPrimFirstTime = false;
+                }else{
+                    primaryArr2[i] = new Array(2);
+                    primaryArr2[i][0] = node;
+                    primaryArr2[i][1] = '1';
+                }
+            }else if( (primary == 0) && (parentNode == name)){
+                if(isSecFirstTime){
+                    secondaryArr1[i] = new Array(2);
+                    secondaryArr1[i][0] = node;
+                    secondaryArr1[i][1] = '0';
+                    isSecFirstTime = false;
+                }else{
+                    secondaryArr2[i] = new Array(2);
+                    secondaryArr2[i][0] = node;
+                    secondaryArr2[i][1] = '0';
+                }
+            }
+        }
+    }
+};
+
+var fillLineArray = function fillLineArray(path_,borderPath_){
+    var node = primaryArr1[primaryArr1.length-1][0];
+    var count = 0;
+    while (('NA' != node) && (count <= 10)){
+        node = getChild(node,path_,borderPath_);
+        count++;
+        if (node != 'NA'){
+            primaryArr1[primaryArr1.length] = new Array(2);
+            primaryArr1[primaryArr1.length-1][0] = node;
+            primaryArr1[primaryArr1.length-1][1] = '1';
+        }
+
+    }
+
+    count = 0;
+    var node = primaryArr2[primaryArr2.length-1][0];
+    while (('NA' != node) && (count <= 10)){
+        node = getChild(node,path_,borderPath_);
+        count++;
+        if (node != 'NA'){
+            primaryArr2[primaryArr2.length] = new Array(2);
+            primaryArr2[primaryArr2.length-1][0] = node;
+            primaryArr2[primaryArr2.length-1][1] = '1';
+        }
+
+    }
+
+    count = 0;
+    var node = secondaryArr1[secondaryArr1.length-1][0];
+    while (('NA' != node) && (count <= 10)){
+        node = getChild(node,path_,borderPath_);
+        count++;
+        if (node != 'NA'){
+            secondaryArr1[secondaryArr1.length] = new Array(2);
+            secondaryArr1[secondaryArr1.length-1][0] = node;
+            secondaryArr1[secondaryArr1.length-1][1] = '0';
+        }
+
+    }
+
+    count = 0;
+    var node = secondaryArr2[secondaryArr2.length-1][0];
+    while (('NA' != node) && (count <= 10)){
+        node = getChild(node,path_,borderPath_);
+        count++;
+        if (node != 'NA'){
+            secondaryArr2[secondaryArr2.length] = new Array(2);
+            secondaryArr2[secondaryArr2.length-1][0] = node;
+            secondaryArr2[secondaryArr2.length-1][1] = '0';
+        }
+
+    }
+
+};
+
+var fillMultiCastLineArray = function fillMultiCastLineArray(borderPath_){
+    var node = primaryMultiCast[primaryMultiCast.length-1][0];
+    var count = 0;
+    while (('NA' != node) && (count <= 10)){
+        node = getMulticastChild(node,borderPath_);
+        count++;
+        if (node != 'NA'){
+            primaryMultiCast[primaryMultiCast.length] = new Array(2);
+            primaryMultiCast[primaryMultiCast.length-1][0] = node;
+            primaryMultiCast[primaryMultiCast.length-1][1] = '0';
+        }
+
+    }
+
+    count = 0;
+    var node = secondaryMultiCast[secondaryMultiCast.length-1][0];
+    while (('NA' != node) && (count <= 10)){
+        node = getMulticastChild(node,borderPath_);
+        count++;
+        if (node != 'NA'){
+            secondaryMultiCast[secondaryMultiCast.length] = new Array(2);
+            secondaryMultiCast[secondaryMultiCast.length-1][0] = node;
+            secondaryMultiCast[secondaryMultiCast.length-1][1] = '0';
+        }
+
+    }
+
+};
+
+var getChild = function getChild(node,path_,borderPath_){
+    // Check for the node in path
+    node = isVobb != true ? node : node.substring(0,node.length-2);
+    if (null != path_){
+        for (node_type in path_.nodes) {
+            for (nodes in path_.nodes[node_type]) {
+                if (path_.nodes[node_type][nodes].parent_node == node){
+                    foundInPath = true;
+                    return isVobb != true ? path_.nodes[node_type][nodes].node_name : path_.nodes[node_type][nodes].node_name + '_2';
+                }
+            }
+        }
+    }
+
+    if (Ext.getCmp('servicesCombo').getRawValue() != 'IPTV'){
+        // Check for the node in border path
+        for (node_type in borderPath_.nodes) {
+            for (nodes in borderPath_.nodes[node_type]) {
+                if (borderPath_.nodes[node_type][nodes].parent_node == node){
+                    return isVobb != true ? borderPath_.nodes[node_type][nodes].node_name : borderPath_.nodes[node_type][nodes].node_name + '_2';
+                }
+            }
+        }
+    }
+    // Return NA if no node present in path and border path
+    return 'NA';
+};
+
+var getMulticastChild = function getMulticastChild(node,borderPath_){
+    // Check for the node in border path
+    for (node_type in borderPath_.nodes) {
+        for (nodes in borderPath_.nodes[node_type]) {
+            if (borderPath_.nodes[node_type][nodes].parent_node == node){
+                return isVobb != true ? borderPath_.nodes[node_type][nodes].node_name : borderPath_.nodes[node_type][nodes].node_name + '_2';
+            }
+         }
+    }
+    // Return NA if no node present in path and border path
+    return 'NA';
+};
+
+var checkHealth = function checkHealth(healthyArr){
+    for (var i = 0; i < healthyArr.length-1; i++){
+        for (idx in linkArray) {
+            var node = healthyArr[i][0];
+            var nextNode = healthyArr[i+1][0];
+            if ((node == linkArray[idx][1].split(':')[0]) && (nextNode == linkArray[idx][2].split(':')[0])){
+                if ((linkArray[idx][3] != '0') || (linkArray[idx][4] != '0') || (linkArray[idx][5] != '0')){
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+};
+
+var markHealthyLine = function markHealthyLine(healthyArr) {
+
+    for (var i = 0; i < healthyArr.length - 1; i++) {
+        for (idx in linkArray) {
+            if ((healthyArr[i][0] == linkArray[idx][1].split(':')[0]) && (healthyArr[i + 1][0] == linkArray[idx][2].split(':')[0])) {
+                var link_object = link_objects.findBy(
+                    function (items, key) {
+                        if (key === linkArray[idx][0]) {
+                            return true;
+                        }
+                        return false;
+                    }
+                );
+                if ((undefined != link_object) && (null != link_object)) {
+                    link_object.setAttributes({'stroke-dasharray':0}, true);
+                }
+            }
+
+        }
+    }
+
+    if (isVobb){
+        cw.surface.getGroup("vobb_border_node_object").each(function (item, id, len) {
+            cw.surface.remove(item, true);
+        });
+
+
+        cw.surface.getGroup("link_object").each(function (item, id, len) {
+            if (item.id.substring(0,6) == 'vobb_border'){
+                cw.surface.remove(item, true);
+            }
+        });
+    }else{
+        cw.surface.getGroup("border_node_object").each(function (item, id, len) {
+            cw.surface.remove(item, true);
+        });
+
+
+        cw.surface.getGroup("link_object").each(function (item, id, len) {
+            if (item.id.substring(0,6) == 'border'){
+                cw.surface.remove(item, true);
+            }
+        });
+    }
+    //var borderCreated = false;
+    for (var index in healthyArr) {
+        if (undefined != borderArr[healthyArr[index][0]])
+            for (var p in borderArr[healthyArr[index][0]]) {
+                //console.log("***Creating Border PATH***")
+                //borderCreated = true;
+                cw.surface.add(
+                    Ext.create('Ext.draw.Sprite',
+                        borderArr[healthyArr[index][0]][p])).show(true);
+
+                for (var j in borderDetailArr){
+                    var tip = Ext.create('Ext.tip.ToolTip', borderDetailArr[j]);
+                   /*if(borderDetailArr[j].id == borderArr[healthyArr[index][0]][p].id + '_tip')
+                        var tip = Ext.create('Ext.tip.ToolTip', borderDetailArr[j]);*/
+                        //tip.setTarget(borderArr[healthyArr[index][0]][p].id);
+                }
+            }
+    }
+};
+
+var markLine = function markLine(healthyArr){
+    for (var i = 0; i < healthyArr.length-1; i++){
+        for (idx in linkArray) {
+            if ((healthyArr[i][0] == linkArray[idx][1].split(':')[0]) && (healthyArr[i+1][0] == linkArray[idx][2].split(':')[0])){
+
+                var link_object = link_objects.findBy(
+                    function(items, key){
+                        if(key === linkArray[idx][0] ){
+                            return true;
+                        }
+                        return false;
+                    }
+                );
+                if ((undefined != link_object) && (null != link_object)){
+                    link_object.setAttributes({'stroke-dasharray':2},true);
+                }
+            }
+        }
+    }
+};
+
+var getActiveMultiCastPath =  function getActiveMultiCastPath(multicastArry, pathArry){
+    var count = 0;
+    for (i in multicastArry){
+        for (j in pathArry){
+            if (multicastArry[i][0] == pathArry[j][0] ){
+                count++;
+            }
+        }
+    }
+
+    if (count == multicastArry.length){
+        if (checkHealth(pathArry)){
+            cw.surface.getGroup("border_node_object").each(function (item, id, len) {
+                cw.surface.remove(item, true);
+            });
+
+            cw.surface.getGroup("link_object").each(function (item, id, len) {
+                if (item.id.substring(0,6) == 'border'){
+                    cw.surface.remove(item, true);
+                }
+            });
+            cw.surface.getGroup("vobb_border_node_object").each(function (item, id, len) {
+                cw.surface.remove(item, true);
+            });
+
+
+            cw.surface.getGroup("link_object").each(function (item, id, len) {
+                if (item.id.substring(0,6) == 'vobb_border'){
+                    cw.surface.remove(item, true);
+                }
+            });
+
+            markHealthyLine(pathArry);
+            markHealthyLine(multicastArry);
+            return true;
+        }
+    }
+    return false;
+};
+

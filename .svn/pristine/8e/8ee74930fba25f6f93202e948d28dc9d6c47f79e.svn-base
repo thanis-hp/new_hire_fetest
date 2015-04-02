@@ -1,0 +1,156 @@
+Ext.onReady(function () {
+    Ext.QuickTips.init();
+    var login = new Ext.FormPanel({
+        id:'login',
+        labelWidth:80,
+        url:'j_spring_security_check',
+        frame:true,
+        title:'Please Login',
+        defaultType:'textfield',
+        monitorValid:true,
+        items:[
+            {
+                fieldLabel:'Username',
+                name:'j_username',
+                allowBlank:false
+            },
+            {
+                fieldLabel:'Password',
+                name:'j_password',
+                inputType:'password',
+                allowBlank:false
+            }
+        ],
+        buttons:[
+            {
+                text:'Login',
+                formBind:true,
+                handler: fnLogin
+            }
+        ],
+        listeners: {
+            afterRender: function(thisForm, options){
+                this.keyNav = Ext.create('Ext.util.KeyNav', this.el, {
+                    enter: fnLogin,
+                    scope: this
+                });
+            }
+        }
+    });
+
+    var win = new Ext.Window({
+        layout:'fit',
+        width:300,
+        height:150,
+        closable:false,
+        resizable:false,
+        plain:true,
+        border:false,
+        items:[login]
+    });
+
+    function fnLogin(){
+
+
+
+        login.getForm().submit({
+            method:'POST',
+            waitTitle:'Connecting',
+            waitMsg:'Authenticating User...',
+            success:function () {
+                Ext.MessageBox.show({
+                    msg: 'Login Successful! Please wait...',
+                    progressText: 'Redirecting...',
+                    width:300,
+                    wait:true,
+                    waitConfig: {interval:100},
+                    animateTarget: 'login'
+                });
+                setTimeout(function(){
+                    var redirect = 'launchMain.htm';
+                    window.location = redirect;
+                }, 1000);
+
+
+                /*Ext.Msg.alert('Status', 'Login Successful!', function (btn, text) {
+                    if (btn == 'ok') {
+                        var redirect = 'launchMain.htm';
+                        window.location = redirect;
+                    }
+                });*/
+            },
+            failure:function (form, action) {
+                /*var obj;
+                if (action.failureType == 'server') {
+                    obj = Ext.util.JSON.decode(action.response.responseText);
+                    Ext.Msg.alert('Login Failed!', obj.errors.reason);
+                } else {
+                    Ext.Msg.alert('Warning!', 'Authentication server is unreachable : ' + action.response.responseText);
+                }*/
+                Ext.Msg.alert('Login Failed!', 'Authentication on the server failed. Please check your username/password.');
+                login.getForm().reset();
+            }
+        });
+    }
+
+    win.show();
+
+    /*var draw = Ext.create('Ext.draw.Component', {
+        viewBox: false,
+        width: 400,
+        height: 400,
+        renderTo: Ext.getBody()
+    });
+
+    Ext.create('Ext.Button', {
+        text    : 'Add Green Sprite',
+        renderTo: Ext.getBody(),
+        handler : function() {
+            //draw.surface.removeAll(true);
+            draw.surface.getGroup("test").each(function(item, id , len){
+                console.log(id, item);
+                draw.surface.remove(item, true);
+
+            });
+            draw.surface.add({
+                "type": "path",
+                "id": "green",
+                "path": "M 66.0,198.0 L 64.0,198.0 L 64.0,193.0 L 66.0,193.0Z",
+                "stroke": "#000",
+                "stroke-width": 1,
+                "fill": "green",
+                "group": "test"
+            }).show(true);
+        }
+    });
+
+    Ext.create('Ext.Button', {
+        text    : 'Remove Green Sprite',
+        renderTo: Ext.getBody(),
+        handler : function() {
+            draw.surface.getGroup("test").each(function(item, id , len){
+                console.log(id, item);
+                draw.surface.remove(item, true);
+
+            });
+        }
+    });
+
+    Ext.create('Ext.Button', {
+        text    : 'Add Blue Sprite',
+        renderTo: Ext.getBody(),
+        handler : function() {
+            draw.surface.removeAll(true);
+            draw.surface.add({
+                "type": "path",
+                "id": "blue",
+                "path": "M 355.0,194.0 L 355.0,187.0 L 363.0,187.0 L 363.0,194.0Z",
+                "stroke": "#000",
+                "stroke-width": 1,
+                "fill": "blue"
+            }).show(true);
+        }
+    });*/
+
+});
+

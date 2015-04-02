@@ -1,0 +1,314 @@
+function getKpiGrid() {
+
+    var kpiStore = new Ext.data.JsonStore({
+        storeId:'Kpi',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getCpuKpi.htm',
+            reader:{
+                type:'json',
+                root:'kpi'
+            }
+        },
+
+        fields:['equipName', 'deviceType', 'location', 'vendor', 'kpiThresholdMidCpu', 'kpiThresholdMaxCpu']
+    });
+
+    var locationStore = new Ext.data.JsonStore({
+        storeId:'LocationStore',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getLocationList.htm',
+            reader:{
+                type:'json',
+                root:'location'
+            }
+        },
+        fields:['name', 'value']
+    });
+
+    var vendorStore = new Ext.data.JsonStore({
+        storeId:'VendorStore',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getVendorList.htm',
+            reader:{
+                type:'json',
+                root:'vendor'
+            }
+        },
+
+        fields:['name', 'value']
+    });
+
+    var deviceList = new Ext.data.JsonStore({
+        storeId:'DeviceStore',
+        autoLoad:false,
+        proxy:{
+            type:'ajax',
+            url:'getDeviceList.htm',
+            reader:{
+                type:'json',
+                root:'device'
+            }
+        },
+
+        fields:['name', 'value']
+    });
+
+    var cellEditing = Ext.create('Ext.grid.plugin.CellEditing', {
+        clicksToEdit:1
+    });
+
+    var syncSettingForm = {
+        xtype:'form',
+        id:'syncSettingForm',
+        layout:'form',
+        frame: true,
+        width   : 600,
+        bodyPadding: 10,
+        defaults: {
+            anchor: '100%',
+            labelWidth: 100
+        },
+        url:'updateCpuKpiBatch.htm',
+        items:[
+            {
+                xtype:'textfield',
+                id:'txtKpiThresholdMidCpu',
+                name:'kpiThresholdMidCpu',
+                value:'',
+                fieldLabel:'Major Threshold',
+                allowBlank:false,
+                readOnly:false
+            },
+            {
+                xtype:'textfield',
+                id:'txtKpiThresholdMaxCpu',
+                name:'kpiThresholdMaxCpu',
+                value:'',
+                fieldLabel:'Critical Threshold',
+                allowBlank:false,
+                readOnly:false
+            },
+            {
+                xtype: 'fieldset',
+                title: 'Sync Condition',
+                collapsible: false,
+                defaults: {
+                    labelWidth: 89,
+                    anchor: '100%',
+                    layout: {
+                        type: 'hbox',
+                        defaultMargins: {top: 0, right: 5, bottom: 0, left: 0}
+                    }
+                },
+                items: [
+                    {
+                        width:          50,
+                        xtype:          'combo',
+                        mode:           'local',
+                        forceSelection: true,
+                        editable:       false,
+                        fieldLabel:     'Location',
+                        name:           'location',
+                        displayField:   'name',
+                        valueField:     'value',
+                        allowBlank: false,
+                        queryMode: 'local',
+                        store: locationStore
+                    },{
+                        width:          50,
+                        xtype:          'combo',
+                        mode:           'local',
+                        forceSelection: true,
+                        editable:       false,
+                        fieldLabel:     'Equipment Type',
+                        name:           'deviceType',
+                        displayField:   'name',
+                        valueField:     'value',
+                        allowBlank: false,
+                        queryMode: 'local',
+                        store:    deviceList
+                    },{
+                        width:          50,
+                        xtype:          'combo',
+                        mode:           'local',
+                        forceSelection: false,
+                        editable:       false,
+                        fieldLabel:     'Vendor',
+                        name:           'vendor',
+                        displayField:   'name',
+                        valueField:     'value',
+                        allowBlank: false,
+                        queryMode: 'local',
+                        store:  vendorStore
+                    }
+                ]
+            }
+        ],
+        buttons:[
+            {
+                text:'Cancel',
+                handler:function () {
+                    this.up('window').hide();
+                }
+            },
+            {
+                text:'Sync',
+                formBind:true,
+                handler:function () {
+                    if (parseInt(Ext.getCmp('txtKpiThresholdMaxCpu').getValue()) < parseInt(Ext.getCmp('txtKpiThresholdMidCpu').getValue())) {
+                        Ext.Msg.alert("Fail", "Max Threshold cannot be less than Min Threshold ");
+                    }else{
+                        var form = this.up('form').getForm();
+                        if (form.isValid()) {
+                            this.up('window').hide();
+                            Ext.getBody().mask('Syncing KPI Threshold Settings...');
+                            form.submit({
+                                success:function (form, action) {
+                                    kpiStore.reload();
+                                    Ext.getBody().unmask();
+
+                                },
+                                failure:function (form, action) {
+                                    Ext.getBody().unmask();
+                                    Ext.Msg.alert('Failed', 'Fail to sync.');
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        ]
+    };
+
+    var syncKpiModelWin = Ext.widget('window', {
+        title:'Sync Setting to Other Equipments',
+        closeAction:'hide',
+        width:450,
+        layout:'fit',
+        modal:true,
+        items:[syncSettingForm]
+    });
+
+
+    var kpiGrid = Ext.create('Ext.grid.Panel', {
+        id:'kpi-panel',
+        store:kpiStore,
+        columns:[
+            Ext.create('Ext.grid.RowNumberer'),
+            {text:"Managed Element", flex:1, sortable:true, dataIndex:'equipName'},
+            {text:"Equipment Type", flex:1, sortable:true, dataIndex:'deviceType'},
+            {text:"Location", flex:1, sortable:true, dataIndex:'location'},
+            {text:"Vendor", flex:1, sortable:true, dataIndex:'vendor'},
+            {text:"Major Threshold (%)", width:140, sortable:true, dataIndex:'kpiThresholdMidCpu',
+                editor:{
+                    xtype:'numberfield',
+                    minValue:0,
+                    maxValue:100
+                }},
+            {text:"Critical Threshold (%)", width:140, sortable:true, dataIndex:'kpiThresholdMaxCpu',
+                editor:{
+                    xtype:'numberfield',
+                    minValue:0,
+                    maxValue:100
+                }},
+            { xtype:'actioncolumn', width:50, sortable:false,
+                items:[
+                    {
+                        icon:'images/sync2.png',
+                        tooltip:'Sync Setting to Other Equipments',
+                        handler:function (grid, rowIndex, colIndex) {
+                            //kpiStore.removeAt(rowIndex);
+                            var rec = grid.getStore().getAt(rowIndex);
+                            Ext.getCmp('txtKpiThresholdMidCpu').setValue(rec.get('kpiThresholdMidCpu'));
+                            Ext.getCmp('txtKpiThresholdMaxCpu').setValue(rec.get('kpiThresholdMaxCpu'));
+
+                            syncKpiModelWin.show();
+                        }
+                    }
+                ]
+            }
+        ],
+        columnLines:true,
+        collapsible:false,
+        title:'CPU KPI Setting',
+        iconCls:'icon-grid',
+        autoScroll:true,
+        plugins:[cellEditing],
+        selModel:{
+            selType:'cellmodel'
+        },
+        tbar:[
+            {
+                xtype:'button',
+                iconCls: 'icon-refresh',
+                text:'Refresh',
+                handler:function () {
+                    kpiStore.reload();
+                }
+            },
+            {
+                xtype:'button',
+                iconCls: 'icon-save',
+                text:'Save All',
+                handler:function () {
+                    var test = kpiStore.getModifiedRecords();
+                    if (test.length > 0) {
+                        var dataArray = new Array();
+
+                        for (var i in test) {
+                            if (parseInt(test[i].data.kpiThresholdMaxCpu) < parseInt(test[i].data.kpiThresholdMidCpu)) {
+                                Ext.Msg.alert("Fail", "Max Threshold cannot be less than Min Threshold for " + test[i].data.equipName);
+                                return false;
+                            }
+                            dataArray.push(test[i].data);
+
+                        }
+
+                        var postValue = JSON.stringify(dataArray);
+                        postValue = "{\"kpi\":" + postValue + "}";
+                        Ext.getBody().mask('Saving KPI Threshold Settings...');
+                        Ext.Ajax.request(
+                            {
+                                url:'updateCpuKpi.htm',
+                                method:'POST',
+                                params:{dataArray:postValue},
+                                success:function (response) {
+                                    Ext.Msg.alert("Success", "CPU KPI Threshold saved successfully.");
+                                    kpiStore.reload();
+                                },
+                                failure:function (response) {
+                                    Ext.Msg.alert("Fail", "Fail to save CPU KPI Threshold.");
+                                },
+                                callback:function () {
+                                    Ext.getBody().unmask();
+                                    kpiStore.reload();
+                                }
+                            }
+                        );
+                    } else {
+                        Ext.Msg.alert("No Changes", "Nothing to save.")
+                    }
+                }
+            }
+        ],
+        listeners:{
+            activate: function(grid,eOpts) {
+                kpiStore.reload();
+                locationStore.reload();
+                vendorStore.reload();
+                deviceList.reload();
+            }
+        }
+    });
+
+
+    return kpiGrid;
+}
+
+

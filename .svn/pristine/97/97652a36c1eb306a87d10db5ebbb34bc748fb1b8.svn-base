@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hp.temip.alb_gui.dao.UserMapper">
+    <resultMap type="com.hp.temip.alb_gui.domain.UserGridObject" id="userGrid">
+        <result column="USER_ID" property="userId" jdbcType="VARCHAR"/>
+        <result column="USERNAME" property="userName" jdbcType="VARCHAR"/>
+        <result column="NAME" property="name" jdbcType="VARCHAR"/>
+        <result column="ENABLED" property="enabled" jdbcType="VARCHAR"/>
+        <result column="DEPT" property="dept" jdbcType="VARCHAR"/>
+        <result column="ROLE" property="role" jdbcType="VARCHAR"/>
+        <result column="LAST_LOGIN" property="lastLogin" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <select id="getUserList" resultMap="userGrid">
+      SELECT a.USER_ID,
+          a.USERNAME,
+          a.NAME,
+          a.DEPT,
+          a.ENABLED,
+          (SELECT AUTHORITY FROM USER_ROLES b WHERE b.USER_ID = a.USER_ID) AS ROLE,
+          (SELECT MAX(c.DATE_TIME) FROM USER_ACCESS_AUDIT c WHERE c.USER_ID = a.USERNAME) AS LAST_LOGIN
+        FROM USERS a
+    </select>
+
+    <update id="updateUsers" parameterType="com.hp.temip.alb_gui.domain.UserGridObject">
+        UPDATE USERS a set a.NAME = #{name}, a.DEPT = #{dept}, a.ENABLED = #{enabled} WHERE a.USER_ID = #{userId}
+    </update>
+    <update id="updateRolebyUserId" parameterType="com.hp.temip.alb_gui.domain.UserGridObject">
+        UPDATE USER_ROLES a set a.AUTHORITY = #{role} WHERE a.USER_ID = #{userId}
+    </update>
+
+    <select id="getUserId" resultType="long">
+        call NEXT VALUE FOR user_seq
+  </select>
+
+    <insert id="insertNewUser" parameterType="com.hp.temip.alb_gui.domain.UserGridObject">
+        INSERT INTO USERS (USER_ID, USERNAME, NAME, DEPT, ENABLED, PASSWORD) VALUES (#{userId}, #{userName}, #{name}, #{dept}, '1', #{password})
+    </insert>
+
+    <insert id="insertRoleForUser" parameterType="com.hp.temip.alb_gui.domain.UserGridObject">
+        INSERT INTO USER_ROLES (USER_ROLE_ID, USER_ID, AUTHORITY) VALUES (NEXT VALUE FOR user_role_seq, #{userId}, #{role});
+    </insert>
+
+    <update id="updatePassword" parameterType="com.hp.temip.alb_gui.domain.UserGridObject">
+        UPDATE USERS a set a.PASSWORD = #{password:varchar} WHERE a.USERNAME = #{userName}
+    </update>
+
+    <update id="updateNewPassword" parameterType="com.hp.temip.alb_gui.domain.UserGridObject">
+        UPDATE USERS a set a.PASSWORD = #{password}, a.ENABLED = 1 WHERE a.USERNAME = #{userName}
+    </update>
+
+    <select id="checkUserValid" resultType="int" parameterType="com.hp.temip.alb_gui.domain.UserGridObject">
+      SELECT count(*) FROM USERS a where a.USERNAME = #{userName} and a.PASSWORD = #{password}
+    </select>
+
+    <delete id="removeAllRoles" parameterType="com.hp.temip.alb_gui.domain.UserGridObject">
+      DELETE FROM USER_ROLES WHERE USER_ID = #{userId}
+    </delete>
+
+    <select id="checkNewUser" resultType="int" parameterType="String">
+      SELECT count(*) FROM USERS a where a.USERNAME = #{username} and a.ENABLED = -1
+    </select>
+
+    <select id="getUser" resultMap="userGrid" parameterType="String">
+      SELECT * FROM USERS a where a.USERNAME = #{username} and a.ENABLED = 1
+    </select>
+</mapper>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hp.temip.alb_gui.dao.UserAccessAuditMapper">
+    <resultMap type="com.hp.temip.alb_gui.domain.UserAccessAudit" id="userAccessAudit">
+        <result column="USER_ID" property="userId" jdbcType="VARCHAR"/>
+        <result column="DATE_TIME" property="strDateTime" jdbcType="VARCHAR"/>
+        <result column="ACTION_TYPE" property="actionType" jdbcType="VARCHAR"/>
+        <result column="SESSION_ID" property="sessionId" jdbcType="VARCHAR"/>
+
+
+        <association property="user" column="USERNAME" javaType="com.hp.temip.alb_gui.domain.User">
+            <result column="NAME" property="name" jdbcType="VARCHAR" />
+            <result column="DEPT" property="dept" jdbcType="VARCHAR" />
+        </association>
+    </resultMap>
+
+    <resultMap id="userAccessAuditChart" type="com.hp.temip.alb_gui.domain.UserAccessAuditChart">
+        <result column="TIME" property="time" jdbcType="VARCHAR"/>
+        <result column="SET_DATA_1" property="dataSet1" jdbcType="VARCHAR"/>
+        <result column="SET_DATA_2" property="dataSet2" jdbcType="VARCHAR"/>
+        <result column="SET_DATA_3" property="dataSet3" jdbcType="VARCHAR"/>
+        <result column="SET_DATA_4" property="dataSet4" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <insert id="insertAudit" parameterType="com.hp.temip.alb_gui.domain.UserAccessAudit">
+      INSERT INTO USER_ACCESS_AUDIT (USER_ID,DATE_TIME,ACTION_TYPE,SESSION_ID) VALUES
+      (#{userId}, current_timestamp, #{actionType}, #{sessionId})
+    </insert>
+
+    <select id="getUserAccessList" resultMap="userAccessAudit" parameterType="String">
+        SELECT a.user_id                           AS USER_ID,
+          a.session_id                             AS SESSION_ID,
+          TO_CHAR(a.DATE_TIME, 'YYYY-MM-DD HH:MI:SS AM')  AS DATE_TIME,
+          a.ACTION_TYPE                            AS ACTION_TYPE,
+          b.name                                   AS NAME,
+          b.dept                                   AS DEPT,
+          b.username                               AS USERNAME
+        FROM USER_ACCESS_AUDIT a
+        LEFT OUTER JOIN USERS b
+        ON a.USER_ID    = b.USERNAME
+        WHERE a.ACTION_TYPE IS NOT NULL
+        AND TO_CHAR(a.DATE_TIME, 'YYYY-MM-DD') = #{value}
+        ORDER BY a.DATE_TIME DESC
+    </select>
+
+</mapper>

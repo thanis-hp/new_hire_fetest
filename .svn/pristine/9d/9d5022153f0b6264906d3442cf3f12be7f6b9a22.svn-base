@@ -1,0 +1,150 @@
+package com.hp.temip.alb_gui.domain;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 8/27/13
+ * Time: 11:31 AM
+ * To change this template use File | Settings | File Templates.
+ */
+public class ProfileGridObject {
+
+    private String profileId;
+    private String dateCreated;
+    private String dateModified;
+    private String translateStatus;
+    private String deployStatus;
+
+
+    //fields in DB
+    private String profileAlarmProcessing;
+    private String controlFileParameterExtraction;
+    private String controlFileAlarmIdentifier;
+    private String customFields;
+    private String albVersion;
+    private String albUser;
+
+
+
+    /*
+
+    PROFILE_ID VARCHAR(20) NOT NULL,
+    PROFILE_ALARM_PROCESSING VARCHAR(20),
+    CONTROL_FILE_PARAMETER_EXTRACTION VARCHAR(30),
+    CONTROL_FILE_ALARM_IDENTIFIER VARCHAR(30),
+    CUSTOM_FIELDS VARCHAR(30),
+    ALB_VERSION VARCHAR(10),
+    ALB_USER VARCHAR(10),
+    TRANSLATE_STATUS VARCHAR(10),
+    DEPLOY_STATUS VARCHAR(10),
+    DATE_CREATED TIMESTAMP NOT NULL,
+    DATE_MODIFIED TIMESTAMP NULL
+     */
+
+
+    public String getProfileId() {
+        return profileId;
+    }
+
+    public void setProfileId(String profileId) {
+        this.profileId = profileId;
+    }
+
+    public String getDateCreated() {
+        return dateCreated;
+    }
+
+    public void setDateCreated(String dateCreated) {
+        this.dateCreated = dateCreated;
+    }
+
+    public String getDateModified() {
+        return dateModified;
+    }
+
+    public void setDateModified(String dateModified) {
+        this.dateModified = dateModified;
+    }
+
+    public String getTranslateStatus() {
+        return translateStatus;
+    }
+
+    public void setTranslateStatus(String translateStatus) {
+        this.translateStatus = translateStatus;
+    }
+
+    public String getDeployStatus() {
+        return deployStatus;
+    }
+
+    public void setDeployStatus(String deployStatus) {
+        this.deployStatus = deployStatus;
+    }
+
+
+    public String getProfileAlarmProcessing() {
+        return profileAlarmProcessing;
+    }
+
+    public void setProfileAlarmProcessing(String profileAlarmProcessing) {
+        this.profileAlarmProcessing = profileAlarmProcessing;
+    }
+
+    public String getControlFileParameterExtraction() {
+        return controlFileParameterExtraction;
+    }
+
+    public void setControlFileParameterExtraction(String controlFileParameterExtraction) {
+        this.controlFileParameterExtraction = controlFileParameterExtraction;
+    }
+
+    public String getControlFileAlarmIdentifier() {
+        return controlFileAlarmIdentifier;
+    }
+
+    public void setControlFileAlarmIdentifier(String controlFileAlarmIdentifier) {
+        this.controlFileAlarmIdentifier = controlFileAlarmIdentifier;
+    }
+
+    public String getCustomFields() {
+        return customFields;
+    }
+
+    public void setCustomFields(String customFields) {
+        this.customFields = customFields;
+    }
+
+    public String getAlbVersion() {
+        return albVersion;
+    }
+
+    public void setAlbVersion(String albVersion) {
+        this.albVersion = albVersion;
+    }
+
+    public String getAlbUser() {
+        return albUser;
+    }
+
+    public void setAlbUser(String albUser) {
+        this.albUser = albUser;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ProfileGridObject that = (ProfileGridObject) o;
+
+        if (!profileId.equals(that.profileId)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return profileId.hashCode();
+    }
+}

@@ -1,0 +1,48 @@
+package com.hp.temip.alb_gui.controller;
+
+import com.hp.temip.alb_gui.domain.AlbReferenceObject;
+import com.hp.temip.alb_gui.service.AlbReferenceService;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.HashMap;
+import java.util.List;
+
+/**
+ * Copyright Hewlett Packard Sales (M) Sdn Bhd
+ * User: Thaniswaran Raja Goval
+ * Email: thaniswaran.raja-goval@hp.com
+ * Date: 9/25/13
+ * Time: 11:59 AM
+ * Project: $(PROJECT_NAME)
+ * Package: com.hp.temip.alb_gui.controller
+ */
+
+@Controller
+public class AlbReferenceController {
+
+    private Log logger = LogFactory.getLog(getClass());
+
+    private AlbReferenceService albReferenceService;
+
+    @Autowired
+    public void setAlbReferenceService(AlbReferenceService service){
+        this.albReferenceService = service;
+    }
+
+    @RequestMapping(value = "/getReferenceList.htm", method = RequestMethod.GET)
+    @ResponseBody
+    public HashMap getReferenceList() {
+        List<AlbReferenceObject> albReferenceObjects = albReferenceService.getReferenceList(1);
+
+        HashMap<String, List<AlbReferenceObject>> modelMap = new HashMap<String, List<AlbReferenceObject>>();
+        modelMap.put("albref", albReferenceObjects);
+        logger.debug(albReferenceObjects);
+        return modelMap;
+    }
+}

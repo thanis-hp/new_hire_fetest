@@ -1,0 +1,53 @@
+package com.hp.temip.alb_gui.dao;
+
+import com.hp.temip.alb_gui.domain.AlarmIdentifierGridObject;
+import com.hp.temip.alb_gui.domain.ParameterExtractGridObject;
+import com.hp.temip.alb_gui.domain.ProfileGridObject;
+import com.hp.temip.alb_gui.domain.SelectionControlGridObject;
+
+import java.util.List;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 8/27/13
+ * Time: 11:30 AM
+ * To change this template use File | Settings | File Templates.
+ */
+public interface ProfileMapper {
+
+
+    public List<ProfileGridObject> getProfileList();
+
+//    public int updateProfile(ProfileGridObject profileGridObject);
+
+    public List<ProfileGridObject> getSingleProfile(ProfileGridObject profileGridObject);
+
+    public int insertNewProfile(ProfileGridObject profileGridObject);
+
+    public long getTopAlbVersion(String profileId);
+
+    public List<ProfileGridObject> checkProfileExists(String profileId);
+
+    int removeProfile(ProfileGridObject profileGridObject);
+
+    public List<SelectionControlGridObject> getSelectionControl(SelectionControlGridObject selectionControlGridObject);
+
+//    public int updateSelectionControl(SelectionControlGridObject selectionControlGridObject);
+
+    public int insertNewSelectionControl(SelectionControlGridObject selectionControlGridObject);
+
+    public List<ParameterExtractGridObject> getParameterExtract(ParameterExtractGridObject parameterExtractGridObject);
+
+//    public int updateSelectionControl(ParameterExtractGridObject parameterExtractGridObject);
+
+    public int insertNewParameterExtract(ParameterExtractGridObject parameterExtractGridObject);
+
+
+    public List<AlarmIdentifierGridObject> getAlarmIdentifier(AlarmIdentifierGridObject alarmIdentifierGridObject);
+
+//    public int updateSelectionControl(AlarmIdentifierGridObject alarmIdentifierGridObject);
+
+    public int insertNewAlarmIdentifier(AlarmIdentifierGridObject alarmIdentifierGridObject);
+
+}

@@ -1,0 +1,42 @@
+package com.hp.temip.alb_gui.service;
+
+import com.hp.temip.alb_gui.dao.AlbHostMapper;
+import com.hp.temip.alb_gui.dao.UserMapper;
+import com.hp.temip.alb_gui.domain.AlbHostGridObject;
+import com.hp.temip.alb_gui.domain.UserGridObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 8/16/12
+ * Time: 12:08 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Service("AlbHostService")
+@Transactional(readOnly = false )
+public class AlbHostService {
+    @Autowired
+    private AlbHostMapper albHostMapper;
+
+
+    public List<AlbHostGridObject> getHostList() {
+        return (List<AlbHostGridObject>)albHostMapper.getHostList();
+    }
+
+    public int updateHosts(AlbHostGridObject albHostGridObject) {
+        return (int)albHostMapper.updateHosts(albHostGridObject);
+    }
+
+    public int insertNewHost(AlbHostGridObject albHostGridObject) {
+        return (int)albHostMapper.insertNewHost(albHostGridObject);
+    }
+
+    public AlbHostGridObject getHost(int hostId){
+        return (AlbHostGridObject)albHostMapper.getHost(hostId);
+    }
+}

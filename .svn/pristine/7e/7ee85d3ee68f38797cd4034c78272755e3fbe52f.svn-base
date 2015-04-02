@@ -1,0 +1,14 @@
+getLatestDesc = function getLatestDesc(selectedNode,selectedNodeStatus){ 
+	 Ext.Ajax.request({
+		url : 'getKBByNodeId.htm',
+		method : 'POST',
+		params : {nodeId:selectedNode,nodeStatus:selectedNodeStatus},
+		success : function(response) {
+			Ext.getCmp('nodeKBDesc').setValue(response.responseText);	        				
+		},
+		failure : function(response) {
+			alert('Failed due to Internal Problem. Please restart the server.');
+		}
+
+	}); 
+};

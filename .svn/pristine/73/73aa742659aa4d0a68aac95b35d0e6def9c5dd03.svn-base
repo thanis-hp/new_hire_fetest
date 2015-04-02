@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    private String profileId;
+    private String dateCreated;
+    private String dateModified;
+    private String translateStatus;
+    private String deployStatus;
+
+    PROFILE_ID VARCHAR(20) NOT NULL,
+    PROFILE_ALARM_PROCESSING VARCHAR(20),
+    CONTROL_FILE_PARAMETER_EXTRACTION VARCHAR(30),
+    CONTROL_FILE_ALARM_IDENTIFIER VARCHAR(30),
+    CUSTOM_FIELDS VARCHAR(30),
+    ALB_VERSION VARCHAR(10),
+    ALB_USER VARCHAR(10),
+    TRANSLATE_STATUS VARCHAR(10),
+    DEPLOY_STATUS VARCHAR(10),
+    DATE_CREATED TIMESTAMP NOT NULL,
+    DATE_MODIFIED TIMESTAMP NULL
+
+-->
+<mapper namespace="com.hp.temip.alb_gui.dao.ProfileMapper">
+    <resultMap type="com.hp.temip.alb_gui.domain.ProfileGridObject" id="profileGrid">
+        <result column="PROFILE_ID" property="profileId" jdbcType="VARCHAR"/>
+        <result column="PROFILE_ALARM_PROCESSING" property="profileAlarmProcessing" jdbcType="VARCHAR"/>
+        <result column="CONTROL_FILE_PARAMETER_EXTRACTION" property="controlFileParameterExtraction" jdbcType="VARCHAR"/>
+        <result column="CONTROL_FILE_ALARM_IDENTIFIER" property="controlFileAlarmIdentifier" jdbcType="VARCHAR"/>
+        <result column="CUSTOM_FIELDS" property="customFields" jdbcType="VARCHAR"/>
+        <result column="ALB_VERSION" property="albVersion" jdbcType="VARCHAR"/>
+        <result column="ALB_USER" property="albUser" jdbcType="VARCHAR"/>
+        <result column="TRANSLATE_STATUS" property="translateStatus" jdbcType="VARCHAR"/>
+        <result column="DEPLOY_STATUS" property="deployStatus" jdbcType="VARCHAR"/>
+        <result column="DATE_CREATED" property="dateCreated" jdbcType="VARCHAR"/>
+        <result column="DATE_MODIFIED" property="dateModified" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <select id="getProfileList" resultMap="profileGrid">
+      SELECT a.PROFILE_ID,
+          a.TRANSLATE_STATUS,
+          a.DEPLOY_STATUS,
+          a.DATE_CREATED,
+          a.DATE_MODIFIED
+        FROM ALB_PROFILETABLE a
+    </select>
+
+    <update id="updateProfile" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        UPDATE ALB_PROFILETABLE a set a.DATE_MODIFIED = #{dateModified}, a.TRANSLATE_STATUS = #{translateStatus},
+        a.DEPLOY_STATUS = #{deployStatus} WHERE a.PROFILE_ID = #{profileId}
+    </update>
+
+    <insert id="insertNewProfile" parameterType="com.hp.temip.alb_gui.domain.ProfileGridObject">
+        INSERT INTO ALB_PROFILETABLE (PROFILE_ID, PROFILE_ALARM_PROCESSING, CONTROL_FILE_PARAMETER_EXTRACTION, CONTROL_FILE_ALARM_IDENTIFIER,
+         CUSTOM_FIELDS, ALB_VERSION, ALB_USER, TRANSLATE_STATUS, DEPLOY_STATUS, DATE_CREATED, DATE_MODIFIED)
+        VALUES (#{profileId}, #{profileAlarmProcessing}, #{controlFileParameterExtraction}, #{controlFileAlarmIdentifier},
+        #{customFields}, #{albVersion}, #{albUser}, #{translateStatus}, #{deployStatus}, #{dateCreated}, #{dateModified})
+    </insert>
+
+</mapper>

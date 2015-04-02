@@ -1,0 +1,192 @@
+function getServiceDashboardPrefs() {
+
+    var serviceDashboardPrefsStore = new Ext.data.JsonStore({
+        storeId:'locationStore',
+        autoLoad:false,
+        sorters:['serviceType'],
+        proxy:{
+            type:'ajax',
+            url:'getServiceDashboardLocation.htm',
+            reader:{
+                type:'json',
+                root:'sdl'
+            },
+            params:{location:''}
+        },
+
+        fields:['location', 'abbr', 'hsiStatus', 'vobbStatus', 'iptvStatus', 'oltStatus', 'oltCpu', 'npeStatus', 'npeCpu', 'brasStatus', 'brasCpu', 'ipscStatus', 'ipscCpu', 'mseStatus', 'mseCpu', 'borderStatus', 'oltUtilz', 'brasUtilz', 'npeUtilz', 'ipscUtilz', 'mseUtilz']
+    });
+
+    
+    function renderIcon(val, metaData, record, rowIndex, colIndex) {
+        var imageURL = val == 2 ? 'status-down' : val == 1 ? 'status-alert' : val == 0 ? 'status-up' : 'no-data';
+        return '<img src="images/' + imageURL + '.png" width="16" height="16">';
+    }
+
+    return Ext.create('Ext.grid.Panel', {
+        id: 'serviceDashboardLoc-panel',
+        collapsible: false,
+        frame: true,
+        columnLines: true,
+        store: serviceDashboardPrefsStore,
+        sortableColumns: false,
+        enableColumnHide: false,
+        enableColumnResize: false,
+        enableColumnMove: false,
+        columns: [{
+            text: 'Service Status',
+            width: 150,
+            columns: [{
+                text     : 'HSI',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'hsiStatus'
+            }, {
+                text     : 'VOBB',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'vobbStatus'
+            },{
+                text     : 'IPTV',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'iptvStatus'
+            }]
+        },{
+            text: 'OLT',
+            width: 120,
+            columns: [{
+                text     : 'CPU',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'oltCpu'
+            },{
+                text     : 'Link Utilz',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'oltUtilz'
+            }, {
+                text     : 'Status',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'oltStatus'
+            }]
+        },{
+            text: 'NPE',
+            width: 120,
+            columns: [{
+                text     : 'CPU',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'npeCpu'
+            },{
+                text     : 'Link Utilz',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'npeUtilz'
+            }, {
+                text     : 'Status',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'npeStatus'
+            }]
+        },{
+            text: 'BRAS',
+            width: 120,
+            columns: [{
+                text     : 'CPU',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'brasCpu'
+            },{
+                text     : 'Link Utilz',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'brasUtilz'
+            }, {
+                text     : 'Status',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'brasStatus'
+            }]
+        },{
+            text: 'IPSC',
+            width: 120,
+            columns: [{
+                text     : 'CPU',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'ipscCpu'
+            },{
+                text     : 'Link Utilz',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'ipscUtilz'
+            }, {
+                text     : 'Status',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'ipscStatus'
+            }]
+        },{
+            text: 'MSE',
+            width: 120,
+            columns: [{
+                text     : 'CPU',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'mseCpu'
+            },{
+                text     : 'Link Utilz',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'mseUtilz'
+            }, {
+                text     : 'Status',
+                renderer:renderIcon,
+                width: 75,
+                dataIndex: 'mseStatus'
+            }]
+        },{
+            text: 'Border',
+            width: 150,
+            columns: [{
+                text     : 'Status',
+                renderer:renderIcon,
+                width: 150,
+                dataIndex: 'borderStatus'
+            }]
+        }],
+        tbar: [{
+            xtype:'button',
+            iconCls: 'icon-back',
+            text:'Back',
+            handler:function () {
+                serviceDashboardPrefsStore.load({params: {location:''}});
+                Ext.getCmp('content-panel').layout.setActiveItem('serviceDashboard-panel');
+            }
+        },{
+            xtype:'button',
+            iconCls: 'icon-refresh',
+            text:'Refresh',
+            handler:function () {
+                var n = Ext.getCmp('serviceDashboardLoc-panel').title.split("-");
+                Ext.getCmp('serviceDashboardLoc-panel').setTitle(n[0] + ' - Last Refreshed: ' + (new Date()).toLocaleString());
+                serviceDashboardPrefsStore.reload();
+            }
+        }]/*,
+        fbar: ['->',{
+            text: 'Export as PDF',
+            iconCls:'go-home',
+            handler : function(){
+                location.href = '';
+            }
+        },{
+            text: 'Export as CSV',
+            iconCls:'go-home',
+            handler : function(){
+                location.href = '';
+            }
+        }]*/
+    });
+}

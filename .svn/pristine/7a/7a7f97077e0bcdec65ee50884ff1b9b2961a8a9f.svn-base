@@ -1,0 +1,40 @@
+package com.hp.temip.alb_gui.service;
+
+import com.hp.temip.alb_gui.dao.ProfileMapper;
+import com.hp.temip.alb_gui.domain.ProfileGridObject;
+import com.hp.temip.alb_gui.domain.UserGridObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Created by IntelliJ IDEA.
+ * User: rajagova
+ * Date: 8/16/12
+ * Time: 12:08 PM
+ * To change this template use File | Settings | File Templates.
+ */
+@Service("ProfileService")
+@Transactional(readOnly = true)
+public class ProfileService {
+    @Autowired
+    private ProfileMapper profileMapper;
+
+
+    public List<ProfileGridObject> getProfileList() {
+        return (List<ProfileGridObject>) profileMapper.getProfileList();
+    }
+
+    public int updateUsers(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.updateProfile(profileGridObject);
+    }
+
+
+
+    public int insertNewUser(ProfileGridObject profileGridObject) {
+        return (int) profileMapper.insertNewProfile(profileGridObject);
+    }
+
+}

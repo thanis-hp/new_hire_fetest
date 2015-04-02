@@ -1,0 +1,214 @@
+package com.hp.temip.alb_gui.util;
+
+import au.com.bytecode.opencsv.CSVWriter;
+import com.hp.temip.alb_gui.domain.AlarmIdentifierGridObject;
+import com.hp.temip.alb_gui.domain.ParameterExtractGridObject;
+import com.hp.temip.alb_gui.domain.ProfileGridObject;
+import com.hp.temip.alb_gui.domain.SelectionControlGridObject;
+import org.omg.Dynamic.Parameter;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.util.List;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: reyeses
+ * Date: 9/11/13
+ * Time: 4:44 PM
+ * To change this template use File | Settings | File Templates.
+ */
+public class FileMaker {
+
+    //get profile from profile table
+    //get selection control
+    //get parameter extract
+    //get alarm identifier
+    public static String PROFILE_SUFFIX = "_profiletable.csv";
+    public static String SELECTION_CONTROL_SUFFIX = "_selectioncontrol.csv";
+    public static String PARAMETER_EXTRACTION_SUFFIX = "_parameterextraction.csv";
+    public static String ALARM_IDENTIFIER_SUFFIX = "_alarmidentifier.csv";
+
+
+    //generate files for all using CsvWriter
+    public static synchronized int generateFiles(String outputDirectory, ProfileGridObject profile, List<SelectionControlGridObject> selectionControlGridObjects,
+                             List<ParameterExtractGridObject> parameterExtractGridObjects, List<AlarmIdentifierGridObject> alarmIdentifierGridObjects){
+
+        //create a directory if it does not exist
+        String directory = outputDirectory+"\\"+profile.getProfileId();
+        File f = new File(directory);
+        try{
+            if(!f.exists()){
+                f.mkdir();
+            }
+        } catch(Exception e){
+            e.printStackTrace();
+        }
+
+
+
+        try{
+            //Profile file
+            CSVWriter profileWriter = new CSVWriter(new FileWriter(directory+"\\"+profile.getProfileId()+PROFILE_SUFFIX),',');
+            // feed in your array (or convert your data to an array)
+            //header first
+            String[] profileEntries = new String[4];
+            profileEntries[0] = "Profile for Alarm Processing";
+            profileEntries[1] = "Control File for Parameter Extraction";
+            profileEntries[2] = "Control File for Alarm Identifier Dependent Processing";
+            profileEntries[3] = "Custom Fields";
+            profileWriter.writeNext(profileEntries);
+
+            //actual row!
+            profileEntries[0] = profile.getProfileId();
+            profileEntries[1] = profile.getControlFileParameterExtraction();
+            profileEntries[2] = profile.getControlFileAlarmIdentifier();
+            profileEntries[3] = profile.getCustomFields();
+
+            profileWriter.writeNext(profileEntries);
+            profileWriter.close();
+
+
+            //selection control
+            CSVWriter selectionWriter = new CSVWriter(new FileWriter(directory+"\\"+profile.getProfileId()+SELECTION_CONTROL_SUFFIX),',');
+            // feed in your array (or convert your data to an array)
+            //header first
+            String[] selectionEntries = new String[8];
+            selectionEntries[0] = "Access Module";
+            selectionEntries[1] = "Global Class";
+            selectionEntries[2] = "Domains";
+            selectionEntries[3] = "Node Name";
+            selectionEntries[4] = "Subclass";
+            selectionEntries[5] = "Original Alarm Remain";
+            selectionEntries[6] = "Profile";
+            selectionEntries[7] = "Managed Object Discriminator";
+            selectionWriter.writeNext(selectionEntries);
+
+
+            SelectionControlGridObject selectionControlGridObject = selectionControlGridObjects.get(0);
+            //actual row!
+            selectionEntries[0] = selectionControlGridObject.getAccessModule();
+            selectionEntries[1] = selectionControlGridObject.getGlobalClass();
+            selectionEntries[2] = selectionControlGridObject.getDomains();
+            selectionEntries[3] = selectionControlGridObject.getNodeName();
+            selectionEntries[4] = selectionControlGridObject.getSubclass();
+            selectionEntries[5] = selectionControlGridObject.getOriginalAlarmRemain();
+            selectionEntries[6] = selectionControlGridObject.getProfileId();
+            selectionEntries[7] = selectionControlGridObject.getManagedObjectDiscriminator();
+
+            selectionWriter.writeNext(selectionEntries);
+            selectionWriter.close();
+
+
+
+            //parameter extraction
+            CSVWriter parameterWriter = new CSVWriter(new FileWriter(directory+"\\"+profile.getProfileId()+PARAMETER_EXTRACTION_SUFFIX),',');
+            // feed in your array (or convert your data to an array)
+            //header first
+            String[] parameterEntries = new String[5];
+            parameterEntries[0] = "Target Alarm Parameter";
+            parameterEntries[1] = "Source Alarm Parameter";
+            parameterEntries[2] = "Keyword";
+            parameterEntries[3] = "extract after Keyword";
+            parameterEntries[4] = "Post-processing";
+            parameterWriter.writeNext(parameterEntries);
+
+
+            for(ParameterExtractGridObject parameterExtractGridObject: parameterExtractGridObjects){
+                //actual row!
+                parameterEntries[0] = parameterExtractGridObject.getTargetAlarmParameter();
+                parameterEntries[1] = parameterExtractGridObject.getSourceAlarmParameter();
+                parameterEntries[2] = parameterExtractGridObject.getKeyword();
+                parameterEntries[3] = parameterExtractGridObject.getExtractAfterKeyword();
+                parameterEntries[4] = parameterExtractGridObject.getPostProcessing();
+
+                parameterWriter.writeNext(parameterEntries);
+            }
+
+            parameterWriter.close();
+
+
+
+
+            //alarm identifier
+            CSVWriter alarmWriter = new CSVWriter(new FileWriter(directory+"\\"+profile.getProfileId()+ALARM_IDENTIFIER_SUFFIX),',');
+            // feed in your array (or convert your data to an array)
+            //header first
+            String[] alarmEntries = new String[21];
+            alarmEntries[0] = "Event-ID";
+            alarmEntries[1] = "Variables";
+            alarmEntries[2] = "Show Alarm";
+            alarmEntries[3] = "Database table";
+            alarmEntries[4] = "Database access";
+            alarmEntries[5] = "Table columns";
+            alarmEntries[6] = "Additional Text";
+            alarmEntries[7] = "Probable Cause";
+            alarmEntries[8] = "Perceived Severity";
+            alarmEntries[9] = "Alarm Type";
+            alarmEntries[10] = "usertext";
+            alarmEntries[11] = "Label1";
+            alarmEntries[12] = "Label2";
+            alarmEntries[13] = "Label3";
+            alarmEntries[14] = "Label4";
+            alarmEntries[15] = "Label5";
+            alarmEntries[16] = "Label6";
+            alarmEntries[17] = "Label7";
+            alarmEntries[18] = "Label8";
+            alarmEntries[19] = "Label9";
+            alarmEntries[20] = "Label10";
+
+            alarmWriter.writeNext(alarmEntries);
+
+            for(AlarmIdentifierGridObject alarmIdentifierGridObject: alarmIdentifierGridObjects){
+                //actual row!
+                alarmEntries[0] = alarmIdentifierGridObject.getEventId();
+                alarmEntries[1] = alarmIdentifierGridObject.getVariables();
+                alarmEntries[2] = alarmIdentifierGridObject.getShowAlarm();
+                alarmEntries[3] = alarmIdentifierGridObject.getDatabaseTable();
+                alarmEntries[4] = alarmIdentifierGridObject.getDatabaseAccess();
+                alarmEntries[5] = alarmIdentifierGridObject.getTableColumns();
+                alarmEntries[6] = alarmIdentifierGridObject.getAdditionalText();
+                alarmEntries[7] = alarmIdentifierGridObject.getProbableCause();
+                alarmEntries[8] = alarmIdentifierGridObject.getPerceivedSeverity();
+                alarmEntries[9] = alarmIdentifierGridObject.getAlarmType();
+                alarmEntries[10] = alarmIdentifierGridObject.getUserText();
+                alarmEntries[11] = alarmIdentifierGridObject.getLabel1();
+                alarmEntries[12] = alarmIdentifierGridObject.getLabel2();
+                alarmEntries[13] = alarmIdentifierGridObject.getLabel3();
+                alarmEntries[14] = alarmIdentifierGridObject.getLabel4();
+                alarmEntries[15] = alarmIdentifierGridObject.getLabel5();
+                alarmEntries[16] = alarmIdentifierGridObject.getLabel6();
+                alarmEntries[17] = alarmIdentifierGridObject.getLabel7();
+                alarmEntries[18] = alarmIdentifierGridObject.getLabel8();
+                alarmEntries[19] = alarmIdentifierGridObject.getLabel9();
+                alarmEntries[20] = alarmIdentifierGridObject.getLabel10();
+
+                alarmWriter.writeNext(alarmEntries);
+            }
+
+
+
+            alarmWriter.close();
+
+        } catch(Exception e){
+            e.printStackTrace();
+        }
+
+
+
+
+
+        return 0;//success?
+    }
+
+
+
+
+
+
+
+
+
+
+
+}
