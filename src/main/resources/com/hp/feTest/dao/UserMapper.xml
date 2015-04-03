@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.hp.feTest.dao.UserMapper">
+<mapper namespace="com.hp.feTest.dao.UserMappers">
     <resultMap type="com.hp.feTest.domain.UserGridObject" id="userGrid">
         <result column="USER_ID" property="userId" jdbcType="VARCHAR"/>
         <result column="USERNAME" property="userName" jdbcType="VARCHAR"/>
